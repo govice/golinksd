@@ -1,0 +1,33 @@
+version: '3'
+
+services:
+  node-a:
+    container_name: "node-a"
+    build: .
+    ports:
+      - "8080:8080"
+      - "8082:8082"
+    volumes:
+      - ./assets/node-a:/assets/chain
+    environment:
+      - PORT=8080
+      - DOCKER_MACHINE_IP=192.168.99.100
+      - PEER_PORT=8082
+      - GENESIS=true
+      - DELAY_STARTUP=0
+  node-b:
+    container_name: "node-b"
+    build: .
+    ports:
+      - "8081:8081"
+      - "8083:8083"
+    volumes:
+      - ./assets/node-b:/assets/chain
+    environment:
+      - PORT=8081
+      - DOCKER_MACHINE_IP=192.168.99.100
+      - PEER_PORT=8083
+      - DELAY_STARTUP=15
+# networks:
+#   host: 
+#     driver: "bridge"

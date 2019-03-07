@@ -2,56 +2,52 @@ package main
 
 import (
 	"log"
-	"net/http"
 	"os"
+	"sync"
 
-	"github.com/gorilla/mux"
+	"github.com/govice/golinks/blockchain"
+	maddr "github.com/multiformats/go-multiaddr"
+
 	"github.com/kardianos/service"
 )
 
-var logger service.Logger
+// var logger service.Logger
 
 type daemon struct{}
 
-var router *mux.Router
-
-func (d *daemon) Start(s service.Service) error {
-	go d.Run(s)
-	return nil
+type Config struct {
+	RendezvousString string
+	BootstrapPeers   []maddr.Multiaddr
+	ListenAddresses  []maddr.Multiaddr
+	ProtocolID       string
 }
 
-func (d *daemon) Run(s service.Service) error {
-	router = mux.NewRouter()
-	router.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		http.ServeFile(w, r, "pages/index.html")
-	})
-
-	go func() {
-		http.ListenAndServe("localhost:8080", router)
-	}()
-	return nil
-}
-
-func (d *daemon) Stop(s service.Service) error {
-	os.Exit(0)
-	return nil
-}
+var chainMutex sync.Mutex
+var chain blockchain.Blockchain
 
 func main() {
+	log.Println("DOCKER_MACHINE_IP: " + os.Getenv("DOCKER_MACHINE_IP"))
+	log.Println("PORT: " + os.Getenv("PORT"))
+
 	serviceConfig := &service.Config{
-		Name:        "GolinksDaemon",
+		Name:        "golinksDaemon",
 		DisplayName: "GoLinks Daemon",
+	}
+
+	//TODO load blockchain from file
+	if os.Getenv("GENESIS") == "true" {
+		chainReset()
 	}
 
 	daemon := &daemon{}
 	s, err := service.New(daemon, serviceConfig)
 	if err != nil {
-		log.Fatal(err)
+		panic(err)
 	}
 
 	logger, err := s.Logger(nil)
 	if err != nil {
-		log.Fatal(err)
+		panic(err)
 	}
 
 	err = s.Run()

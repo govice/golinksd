@@ -1,0 +1,26 @@
+<!doctype html>
+<html>
+
+<head>
+    <title>{{ .title }}</title>
+    {{ template "header.tmpl.html" . }}
+</head>
+
+<body>
+    <div class="container">
+        {{ template "navbar.tmpl.html" . }}
+        <div class="row">
+            <div class="col">
+                <h1>{{ .Title }}</h1>
+            </div>
+        </div>
+        <div class="row-md-8">
+            <p>There was an error.</p>
+            <a class="btn btn-primary" href="/">Home</a>
+        </div>
+
+    </div>
+    {{ template "scripts.tmpl.html" . }}
+</body>
+
+</html>
