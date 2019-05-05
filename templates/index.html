@@ -1,0 +1,28 @@
+<!doctype html>
+
+
+<html>
+
+<head>
+	<title>{{ .title }}</title>
+	{{ template "header.tmpl.html" . }}
+	<title>Hello World</title>
+
+</head>
+
+<body>
+	<div class="container">
+		{{ template "navbar.tmpl.html" . }}
+		<div class="row">
+			<div class="col">
+				<h1>Golinks Daemon</h1>
+			</div>
+		</div>
+
+		{{ template "console.html" . }}
+
+	</div>
+	{{ template "scripts.tmpl.html" . }}
+</body>
+
+</html>

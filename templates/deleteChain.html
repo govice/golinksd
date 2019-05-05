@@ -1,0 +1,27 @@
+<!doctype html>
+<html>
+
+<head>
+    <title>{{ .title }}</title>
+    {{ template "header.tmpl.html" . }}
+</head>
+
+<body>
+    <div class="container">
+        {{ template "navbar.tmpl.html" . }}
+        <div class="row">
+            <div class="col">
+                <h1>{{ .heading }}</h1>
+            </div>
+        </div>
+
+        <form action="/console/deleteChain" method="POST">
+            <button type="submit" class="btn btn-danger">Yes</button>
+        </form>
+        <button type="button" class="btn btn-primary">Cancel</button>
+
+    </div>
+    {{ template "scripts.tmpl.html" . }}
+</body>
+
+</html>

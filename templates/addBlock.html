@@ -1,0 +1,31 @@
+<!doctype html>
+<html>
+
+<head>
+    <title>{{ .title }}</title>
+    {{ template "header.tmpl.html" . }}
+</head>
+
+<body>
+    <div class="container">
+        {{ template "navbar.tmpl.html" . }}
+        <div class="row">
+            <div class="col">
+                <h1>{{ .Title }}</h1>
+            </div>
+        </div>
+
+        <form action="/console/addBlock" method="POST">
+            <div class="form-group">
+                <label for="blockContentTextArea">Block Content</label>
+                <textarea class="form-control" id="blockContentTextArea" name="blockContentTextArea"
+                    rows="5"></textarea>
+            </div>
+            <button type="submit" class="btn btn-primary">Submit</button>
+        </form>
+
+    </div>
+    {{ template "scripts.tmpl.html" . }}
+</body>
+
+</html>

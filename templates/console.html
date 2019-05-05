@@ -1,0 +1,7 @@
+<div class="row-md-8 ">
+	{{ range .cards }}
+	<div class="column-md-8 mx-2">
+		{{ template "card.tmpl.html" . }}
+	</div>
+	{{ end }}
+</div>
