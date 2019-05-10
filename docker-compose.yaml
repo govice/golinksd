@@ -2,6 +2,7 @@ version: '3'
 
 services:
   node-a:
+    image: node-a
     container_name: "node-a"
     build: .
     ports:
@@ -16,6 +17,7 @@ services:
       - GENESIS=true
       - DELAY_STARTUP=0
   node-b:
+    image: node-a
     container_name: "node-b"
     build: .
     ports:
