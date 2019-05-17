@@ -6,18 +6,17 @@ import (
 	"os"
 
 	"github.com/gin-gonic/gin"
-	"github.com/govice/golinks-daemon/net"
 )
 
 var router *gin.Engine
 
-var ledger = net.Ledger{
-	Nodes: []net.Node{
-		net.Node{
+var ledger = Ledger{
+	Nodes: []Node{
+		Node{
 			Address:   "http://" + os.Getenv("DOCKER_MACHINE_IP") + ":8080",
 			Available: true,
 		},
-		net.Node{
+		Node{
 			Address:   "http://" + os.Getenv("DOCKER_MACHINE_IP") + ":8081",
 			Available: true,
 		},
