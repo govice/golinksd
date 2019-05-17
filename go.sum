@@ -70,8 +70,6 @@ github.com/gorilla/context v1.1.1/go.mod h1:kBGZzfjB9CEq2AlWe17Uuf7NDRt0dE0s8S51
 github.com/gorilla/mux v1.6.2/go.mod h1:1lud6UwP+6orDFRuTfBEV8e9/aOM/c4fVVCaMa2zaAs=
 github.com/gorilla/websocket v1.4.0 h1:WDFjx/TMzVgy9VdMMQi2K2Emtwi2QcUQsztZ/zLaH/Q=
 github.com/gorilla/websocket v1.4.0/go.mod h1:E7qHFY5m1UJ88s3WnNqhKjPHQ0heANvMoAMk2YaljkQ=
-github.com/govice/golinks-daemon/net v0.0.0-20190510054736-db95cdd55f4f h1:Na0OKeAhm242xaBeKea6jYPsQqbx7XjamoKSCvc8O1E=
-github.com/govice/golinks-daemon/net v0.0.0-20190510054736-db95cdd55f4f/go.mod h1:YCOCQQILF0UhNM72bzzEx7/Rzve+CcrAkFhNATiHK+o=
 github.com/govice/golinks/block v0.0.0-20190510053004-bd4f7003a03c h1:R1L3vfUuCw9bdwrcg+ygcXoOxqMcprNYs0y/iYS3Pgw=
 github.com/govice/golinks/block v0.0.0-20190510053004-bd4f7003a03c/go.mod h1:NJKUuGjcZkxX7d5WcYdPMY7bxa5XXkM0RIVTa0E7wig=
 github.com/govice/golinks/blockchain v0.0.0-20190510053004-bd4f7003a03c h1:kZovkcpz4+LLkFQCfpxI6V0S7teqvLiulNbtxBNmTz0=

@@ -7,7 +7,6 @@ require (
 	github.com/coreos/go-semver v0.3.0 // indirect
 	github.com/gin-gonic/gin v1.4.0
 	github.com/google/go-cmp v0.3.0 // indirect
-	github.com/govice/golinks-daemon/net v0.0.0-20190510054736-db95cdd55f4f
 	github.com/govice/golinks/block v0.0.0-20190510053004-bd4f7003a03c
 	github.com/govice/golinks/blockchain v0.0.0-20190510053004-bd4f7003a03c
 	github.com/ipfs/go-cid v0.0.2 // indirect
