@@ -2,17 +2,36 @@ package main
 
 import (
 	"os"
+	"sync"
 	"time"
 
+	"github.com/gin-gonic/gin"
 	"github.com/kardianos/service"
 )
 
-var pingNodeTicker <-chan time.Time
+var (
+	pingNodeTicker <-chan time.Time
+)
 
 func (d *daemon) Run(s service.Service) error {
+	router = gin.Default()
+	blockchainService = &BlockchainService{
+		mutex: sync.Mutex{},
+	}
+	//TODO load blockchain from file
+	if os.Getenv("GENESIS") == "true" {
+		blockchainService.resetChain()
+	}
 	go startPeer()
 	go startWebserver()
+
+	apiService = &APIService{
+		router: router,
+	}
+	go apiService.startAPI()
+
 	// go pingNodes()
+	router.Run(":" + os.Getenv("PORT")) // listen and serve on PORT
 	return nil
 }
 

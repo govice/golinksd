@@ -4,7 +4,6 @@ import (
 	"bufio"
 	"context"
 	"encoding/json"
-	"fmt"
 	"log"
 	"os"
 	"time"
@@ -91,35 +90,21 @@ func readData(rw *bufio.ReadWriter) {
 				continue
 			}
 
-			chainMutex.Lock()
-			gci, err := chain.GetGCI(peerChain)
+			gci, err := blockchainService.GCI(peerChain)
 			if err != nil {
-				chainMutex.Unlock()
 				log.Println(err)
 				time.Sleep(time.Second * 10)
 				continue
 			}
-			chainMutex.Unlock()
 			log.Println("GCI: ", gci)
 
-			if peerChain.Length() > chain.Length() && gci >= 0 {
-				chainMutex.Lock()
-				if err := chain.UpdateChain(peerChain); err != nil {
+			if peerChain.Length() > blockchainService.ChainLength() && gci >= 0 {
+				if err := blockchainService.UpdateChain(peerChain); err != nil {
 					log.Println(err)
-					chainMutex.Unlock()
 					time.Sleep(time.Second * 10)
 					continue
 				}
-				chainMutex.Unlock()
 				log.Println("UPDATED CHAIN")
-				bytes, err := json.MarshalIndent(chain, "", " ")
-				if err != nil {
-					log.Println(err)
-					time.Sleep(time.Second * 10)
-					continue
-				}
-
-				fmt.Printf("\x1b[32m%s\x1b[0m> ", string(bytes))
 			}
 		}
 	}
@@ -127,15 +112,12 @@ func readData(rw *bufio.ReadWriter) {
 
 func writeData(rw *bufio.ReadWriter) {
 	for {
-		chainMutex.Lock()
-		bytes, err := json.Marshal(chain)
+		bytes, err := blockchainService.ChainJSON()
 		if err != nil {
-			chainMutex.Unlock()
 			log.Println(err)
 			time.Sleep(time.Second * 10)
 			continue
 		}
-		chainMutex.Unlock()
 
 		_, err = rw.WriteString(string(bytes) + "\n")
 		if err != nil {

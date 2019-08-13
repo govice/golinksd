@@ -16,6 +16,7 @@ services:
       - PEER_PORT=8082
       - GENESIS=true
       - DELAY_STARTUP=0
+      - AUTH_SERVER=http://localhost:8000
   node-b:
     image: node-a
     container_name: "node-b"
@@ -30,6 +31,7 @@ services:
       - DOCKER_MACHINE_IP=192.168.99.100
       - PEER_PORT=8083
       - DELAY_STARTUP=15
+      - AUTH_SERVER=http://localhost:8000
 # networks:
 #   host: 
 #     driver: "bridge"
