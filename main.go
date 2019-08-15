@@ -3,9 +3,7 @@ package main
 import (
 	"log"
 	"os"
-	"sync"
 
-	"github.com/govice/golinks/blockchain"
 	maddr "github.com/multiformats/go-multiaddr"
 
 	"github.com/kardianos/service"
@@ -22,21 +20,17 @@ type Config struct {
 	ProtocolID       string
 }
 
-var chainMutex sync.Mutex
-var chain blockchain.Blockchain
-
 func main() {
 	log.Println("DOCKER_MACHINE_IP: " + os.Getenv("DOCKER_MACHINE_IP"))
 	log.Println("PORT: " + os.Getenv("PORT"))
+	log.Println("AUTH_SERVER: " + os.Getenv("AUTH_SERVER"))
+	if os.Getenv("AUTH_SERVER") == "" {
+		log.Fatal("Enviroment AUTH_SERVER does not exist")
+	}
 
 	serviceConfig := &service.Config{
 		Name:        "golinksDaemon",
 		DisplayName: "GoLinks Daemon",
-	}
-
-	//TODO load blockchain from file
-	if os.Getenv("GENESIS") == "true" {
-		chainReset()
 	}
 
 	daemon := &daemon{}

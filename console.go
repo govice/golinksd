@@ -35,7 +35,7 @@ func registerConsoleHandlers(router *gin.Engine) {
 		formContent := c.PostForm("blockContentTextArea")
 		log.Println(formContent)
 		if len(formContent) > 0 {
-			if err := chainAddNewBlock([]byte(formContent)); err != nil {
+			if _, err := blockchainService.addBlock([]byte(formContent)); err != nil {
 				c.Redirect(http.StatusSeeOther, "/error")
 				return
 			}
@@ -44,7 +44,7 @@ func registerConsoleHandlers(router *gin.Engine) {
 	})
 
 	router.GET("/console/getChain", func(c *gin.Context) {
-		c.JSON(http.StatusOK, chain)
+		c.JSON(http.StatusOK, blockchainService.chain)
 	})
 
 	router.GET("console/deleteChain", func(c *gin.Context) {
@@ -55,7 +55,7 @@ func registerConsoleHandlers(router *gin.Engine) {
 	})
 
 	router.POST("console/deleteChain", func(c *gin.Context) {
-		chainReset()
+		blockchainService.resetChain()
 		c.Redirect(http.StatusSeeOther, "/console")
 	})
 

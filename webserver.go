@@ -24,7 +24,6 @@ var ledger = Ledger{
 }
 
 func startWebserver() {
-	router = gin.Default()
 	templatesHome := os.Getenv("TEMPLATES_HOME")
 	log.Println("Templates Home: " + templatesHome)
 	if templatesHome != "" {
@@ -39,5 +38,5 @@ func startWebserver() {
 	})
 
 	registerConsoleHandlers(router)
-	router.Run(":" + os.Getenv("PORT")) // listen and serve on PORT
+
 }
