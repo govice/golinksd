@@ -25,7 +25,7 @@ func (service *AuthenticationService) valid(userAuth *externalUserAuth) (bool, e
 		return false, err
 	}
 
-	if res.StatusCode == http.StatusAccepted {
+	if res.StatusCode == http.StatusOK {
 		return true, nil
 	}
 	return false, nil

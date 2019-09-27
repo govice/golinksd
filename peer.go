@@ -28,7 +28,10 @@ func handleStream(stream net.Stream) {
 }
 
 func startPeer() {
-
+	if os.Getenv("PEER_PORT") == "" {
+		log.Println("PEER_PORT not assigned, not starting peer")
+		return
+	}
 	hostAddress, err := maddr.NewMultiaddr("/ip4/0.0.0.0/tcp/" + os.Getenv("PEER_PORT"))
 	if err != nil {
 		panic(err)
