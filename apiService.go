@@ -124,5 +124,5 @@ type blockchainSearch struct {
 }
 
 type blockData struct {
-	Data string `json:"data"`
+	Data []byte `json:"data"`
 }
