@@ -93,7 +93,7 @@ func readData(rw *bufio.ReadWriter) {
 				continue
 			}
 
-			gci, err := blockchainService.GCI(peerChain)
+			gci, err := blockchainService.GCI(&peerChain)
 			if err != nil {
 				log.Println(err)
 				time.Sleep(time.Second * 10)
@@ -102,7 +102,7 @@ func readData(rw *bufio.ReadWriter) {
 			log.Println("GCI: ", gci)
 
 			if peerChain.Length() > blockchainService.ChainLength() && gci >= 0 {
-				if err := blockchainService.UpdateChain(peerChain); err != nil {
+				if err := blockchainService.UpdateChain(&peerChain); err != nil {
 					log.Println(err)
 					time.Sleep(time.Second * 10)
 					continue
