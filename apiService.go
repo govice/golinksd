@@ -85,23 +85,23 @@ func findBlockEndpoint(c *gin.Context) {
 		return
 	}
 
-	var block block.Block
+	block := &block.Block{}
 	switch finder.Format {
 	case "index":
 		index, _ := strconv.Atoi(finder.Key)
-		block = blockchainService.FindBlockByIndex(index)
+		block, _ = blockchainService.FindBlockByIndex(index)
 		break
 	case "hash":
 		hash, _ := base64.StdEncoding.DecodeString(finder.Key)
-		block = blockchainService.FindBlockByHash(hash)
+		block, _ = blockchainService.FindBlockByHash(hash)
 		break
 	case "parent_hash":
 		parentHash, _ := base64.StdEncoding.DecodeString(finder.Key)
-		block = blockchainService.FindBlockByParentHash(parentHash)
+		block, _ = blockchainService.FindBlockByParentHash(parentHash)
 		break
 	case "timestamp":
 		timestamp, _ := strconv.ParseInt(finder.Key, 10, 64)
-		block = blockchainService.FindBlockByTimestamp(timestamp)
+		block, _ = blockchainService.FindBlockByTimestamp(timestamp)
 		break
 	}
 

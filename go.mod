@@ -7,9 +7,7 @@ require (
 	github.com/gin-contrib/sse v0.1.0 // indirect
 	github.com/gin-gonic/gin v1.4.0
 	github.com/gogo/protobuf v1.2.2-0.20190730201129-28a6bbf47e48 // indirect
-	github.com/golang/protobuf v1.3.2 // indirect
-	github.com/govice/golinks/block v0.0.0-20190804205723-8c69e5636931
-	github.com/govice/golinks/blockchain v0.0.0-20190804205723-8c69e5636931
+	github.com/govice/golinks v0.1.0
 	github.com/hashicorp/golang-lru v0.5.3 // indirect
 	github.com/ipfs/go-cid v0.0.3 // indirect
 	github.com/json-iterator/go v1.1.7 // indirect
@@ -29,15 +27,8 @@ require (
 	github.com/multiformats/go-multiaddr-dns v0.0.3 // indirect
 	github.com/multiformats/go-multihash v0.0.6 // indirect
 	github.com/opentracing/opentracing-go v1.1.0 // indirect
-	github.com/ugorji/go/codec v1.1.7 // indirect
-	go.opencensus.io v0.22.0 // indirect
+	github.com/ugorji/go v1.1.7 // indirect
 	golang.org/x/crypto v0.0.0-20190701094942-4def268fd1a4 // indirect
 	golang.org/x/net v0.0.0-20190724013045-ca1201d0de80 // indirect
-	golang.org/x/sync v0.0.0-20190423024810-112230192c58 // indirect
 	golang.org/x/sys v0.0.0-20190804053845-51ab0e2deafa // indirect
-	golang.org/x/xerrors v0.0.0-20190717185122-a985d3407aa7 // indirect
 )
-
-replace github.com/govice/golinks/block => ../golinks/block
-
-replace github.com/govice/golinks/blockchain => ../golinks/blockchain
