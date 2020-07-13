@@ -13,6 +13,8 @@ var (
 	pingNodeTicker <-chan time.Time
 )
 
+type daemon struct{}
+
 func (d *daemon) Run(s service.Service) error {
 	router = gin.Default()
 	blockchainService = &BlockchainService{

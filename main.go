@@ -9,9 +9,7 @@ import (
 	"github.com/kardianos/service"
 )
 
-// var logger service.Logger
-
-type daemon struct{}
+var daemonLogger service.Logger
 
 type Config struct {
 	RendezvousString string
@@ -31,21 +29,22 @@ func main() {
 	serviceConfig := &service.Config{
 		Name:        "golinksDaemon",
 		DisplayName: "GoLinks Daemon",
+		Description: "golinks daemon",
 	}
 
-	daemon := &daemon{}
-	s, err := service.New(daemon, serviceConfig)
+	d := &daemon{}
+	s, err := service.New(d, serviceConfig)
 	if err != nil {
-		panic(err)
+		fatalln(err)
 	}
 
-	logger, err := s.Logger(nil)
+	daemonLogger, err = s.Logger(nil)
 	if err != nil {
-		panic(err)
+		fatalln(err)
 	}
 
 	err = s.Run()
 	if err != nil {
-		logger.Error(err)
+		daemonLogger.Error(err)
 	}
 }
