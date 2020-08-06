@@ -15,4 +15,5 @@ require (
 	github.com/libp2p/go-libp2p-peerstore v0.2.6
 	github.com/libp2p/go-libp2p-protocol v0.1.0
 	github.com/multiformats/go-multiaddr v0.2.2
+	github.com/spf13/viper v1.7.1
 )

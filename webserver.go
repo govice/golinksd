@@ -10,18 +10,7 @@ import (
 
 var router *gin.Engine
 
-var ledger = Ledger{
-	Nodes: []Node{
-		Node{
-			Address:   "http://" + os.Getenv("DOCKER_MACHINE_IP") + ":8080",
-			Available: true,
-		},
-		Node{
-			Address:   "http://" + os.Getenv("DOCKER_MACHINE_IP") + ":8081",
-			Available: true,
-		},
-	},
-}
+var ledger Ledger
 
 func startWebserver() {
 	templatesHome := os.Getenv("TEMPLATES_HOME")

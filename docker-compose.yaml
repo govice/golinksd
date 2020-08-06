@@ -12,7 +12,6 @@ services:
       - ./assets/node-a:/assets/chain
     environment:
       - PORT=8080
-      - DOCKER_MACHINE_IP=192.168.99.100
       - PEER_PORT=8082
       - GENESIS=true
       - DELAY_STARTUP=0
@@ -28,7 +27,6 @@ services:
       - ./assets/node-b:/assets/chain
     environment:
       - PORT=8081
-      - DOCKER_MACHINE_IP=192.168.99.100
       - PEER_PORT=8083
       - DELAY_STARTUP=15
       - AUTH_SERVER=http://localhost:8000
