@@ -7,6 +7,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/kardianos/service"
+	"github.com/spf13/viper"
 )
 
 var (
@@ -21,7 +22,7 @@ func (d *daemon) Run(s service.Service) error {
 		mutex: sync.Mutex{},
 	}
 	//TODO load blockchain from file
-	if os.Getenv("GENESIS") == "true" {
+	if viper.GetBool("genesis") {
 		blockchainService.resetChain()
 	}
 	go startPeer()
@@ -33,7 +34,7 @@ func (d *daemon) Run(s service.Service) error {
 	go apiService.startAPI()
 
 	// go pingNodes()
-	router.Run(":" + os.Getenv("PORT")) // listen and serve on PORT
+	router.Run(":" + viper.GetString("port")) // listen and serve on PORT
 	return nil
 }
 
