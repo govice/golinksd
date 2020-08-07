@@ -4,7 +4,8 @@ import (
 	"bytes"
 	"encoding/json"
 	"net/http"
-	"os"
+
+	"github.com/spf13/viper"
 )
 
 type AuthenticationService struct {
@@ -13,7 +14,7 @@ type AuthenticationService struct {
 var authService *AuthenticationService
 
 func (service *AuthenticationService) valid(userAuth *externalUserAuth) (bool, error) {
-	authServerURI := os.Getenv("AUTH_SERVER")
+	authServerURI := viper.GetString("auth_server")
 	authJSON, err := json.Marshal(userAuth)
 	if err != nil {
 		return false, err

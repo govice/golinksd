@@ -35,11 +35,8 @@ func main() {
 	ledger = *l
 	logln(ledger)
 
-	log.Println("PORT: " + os.Getenv("PORT"))
-	log.Println("AUTH_SERVER: " + os.Getenv("AUTH_SERVER"))
-	if os.Getenv("AUTH_SERVER") == "" {
-		log.Fatal("Enviroment AUTH_SERVER does not exist")
-	}
+	log.Println("PORT: " + viper.GetString("port"))
+	log.Println("AUTH_SERVER: " + viper.GetString("auth_server"))
 
 	serviceConfig := &service.Config{
 		Name:        "golinksDaemon",
@@ -71,7 +68,13 @@ func setupConfig() error {
 
 	viper.SetConfigName("config")
 	viper.SetConfigType("json")
-	viper.SetDefault("peerPort", 7777)
+	viper.SetEnvPrefix("golinksd")
+	viper.SetDefault("peer_port", 7777)
+	viper.SetDefault("auth_server", "https://govice.org")
+	viper.SetDefault("port", 8080)
+	viper.SetDefault("genesis", false)
+	viper.SetDefault("delay_startup", 0)
+	viper.SetDefault("templates_home", "./templates")
 
 	viper.AddConfigPath(daemonHome)
 

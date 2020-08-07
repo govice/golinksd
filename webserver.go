@@ -3,9 +3,9 @@ package main
 import (
 	"log"
 	"net/http"
-	"os"
 
 	"github.com/gin-gonic/gin"
+	"github.com/spf13/viper"
 )
 
 var router *gin.Engine
@@ -13,7 +13,7 @@ var router *gin.Engine
 var ledger Ledger
 
 func startWebserver() {
-	templatesHome := os.Getenv("TEMPLATES_HOME")
+	templatesHome := viper.GetString("templates_home")
 	log.Println("Templates Home: " + templatesHome)
 	if templatesHome != "" {
 		router.LoadHTMLGlob(templatesHome + "/*")

@@ -5,8 +5,9 @@ import (
 	"io/ioutil"
 	"log"
 	"net/http"
-	"os"
 	"strings"
+
+	"github.com/spf13/viper"
 )
 
 type Info struct {
@@ -29,7 +30,7 @@ func (ledger Ledger) PingNodes() {
 			continue
 		}
 
-		if strings.Contains(node.Address, os.Getenv("PORT")) {
+		if strings.Contains(node.Address, viper.GetString("port")) {
 			continue
 		}
 

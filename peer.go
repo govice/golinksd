@@ -5,7 +5,6 @@ import (
 	"context"
 	"encoding/json"
 	"log"
-	"os"
 	"time"
 
 	"github.com/govice/golinks/blockchain"
@@ -15,6 +14,7 @@ import (
 	net "github.com/libp2p/go-libp2p-net"
 	protocol "github.com/libp2p/go-libp2p-protocol"
 	maddr "github.com/multiformats/go-multiaddr"
+	"github.com/spf13/viper"
 )
 
 // var ctx context.Context
@@ -28,11 +28,11 @@ func handleStream(stream net.Stream) {
 }
 
 func startPeer() {
-	if os.Getenv("PEER_PORT") == "" {
+	if !viper.IsSet("peer_port") {
 		log.Println("PEER_PORT not assigned, not starting peer")
 		return
 	}
-	hostAddress, err := maddr.NewMultiaddr("/ip4/0.0.0.0/tcp/" + os.Getenv("PEER_PORT"))
+	hostAddress, err := maddr.NewMultiaddr("/ip4/0.0.0.0/tcp/" + viper.GetString("peer_port"))
 	if err != nil {
 		panic(err)
 	}
