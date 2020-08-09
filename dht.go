@@ -24,9 +24,7 @@ func runDHT(ctx context.Context, host host.Host, config Config) {
 	// Bootstrap the DHT. In the default configuration, this spawns a Background
 	// thread that will refresh the peer table
 	log.Println("Bootstrapping the DHT")
-	bootstrapConfig := dht.DefaultBootstrapConfig
-	bootstrapConfig.Period = time.Second * 10
-	if err = kademliaDHT.BootstrapWithConfig(ctx, bootstrapConfig); err != nil {
+	if err = kademliaDHT.Bootstrap(ctx); err != nil {
 		panic(err)
 	}
 
