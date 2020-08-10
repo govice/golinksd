@@ -1,21 +1,16 @@
-FROM golang:1.12-alpine AS daemon_base
+FROM golang:alpine AS build
 RUN apk add --no-cache git bash
 WORKDIR /go/src/github.com/govice/golinks-daemon
-
-ENV GO111MODULE=on
-
+ENV GOPRIVATE="github.com/libp2p/*"
 COPY go.mod .
 COPY go.sum .
+RUN go mod download -x
 
-RUN go mod download
-
-FROM daemon_base AS daemon_build
-COPY . .
-RUN go install
-
-FROM alpine
-COPY --from=daemon_build /go/bin/golinks-daemon /bin/golinks-daemon
+FROM golang:alpine
+WORKDIR /go/src/github.com/govice/golinks-daemon
+COPY --from=build /go/pkg /go/pkg
 ENV TEMPLATES_HOME="/templates"
-COPY templates /templates
+COPY . .
+RUN go install -v .
 
-ENTRYPOINT ["/bin/golinks-daemon"]
+ENTRYPOINT ["golinks-daemon"]
