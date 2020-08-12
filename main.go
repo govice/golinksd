@@ -75,6 +75,7 @@ func setupConfig() error {
 	viper.SetDefault("genesis", false)
 	viper.SetDefault("delay_startup", 0)
 	viper.SetDefault("templates_home", "./templates")
+	viper.SetDefault("ledger", "https://govice.org/assets/ledger.json")
 
 	viper.AddConfigPath(daemonHome)
 
