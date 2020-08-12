@@ -39,8 +39,8 @@ func main() {
 	log.Println("AUTH_SERVER: " + viper.GetString("auth_server"))
 
 	serviceConfig := &service.Config{
-		Name:        "golinksDaemon",
-		DisplayName: "GoLinks Daemon",
+		Name:        "golinksd",
+		DisplayName: "golinksd",
 		Description: "golinks daemon",
 	}
 
@@ -113,5 +113,5 @@ func loadLedger() (*Ledger, error) {
 
 func HomeDir() string {
 	homeDir, _ := os.UserHomeDir()
-	return filepath.Join(homeDir, ".golinks-daemon")
+	return filepath.Join(homeDir, ".golinksd")
 }
