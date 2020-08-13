@@ -16,4 +16,5 @@ require (
 	github.com/libp2p/go-libp2p-protocol v0.1.0
 	github.com/multiformats/go-multiaddr v0.2.2
 	github.com/spf13/viper v1.7.1
+	golang.org/x/sync v0.0.0-20200317015054-43a5402ce75a
 )

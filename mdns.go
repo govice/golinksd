@@ -21,7 +21,7 @@ func (n *discoveryNotifee) HandlePeerFound(pi pstore.PeerInfo) {
 	n.PeerChan <- pi
 }
 
-func runMDNS(ctx context.Context, host host.Host, config Config) {
+func runMDNS(ctx context.Context, host host.Host, config Config) error {
 	ser, err := discovery.NewMdnsService(ctx, host, time.Hour, config.RendezvousString)
 	if err != nil {
 		panic(err)
@@ -53,5 +53,6 @@ func runMDNS(ctx context.Context, host host.Host, config Config) {
 			fmt.Println("Connected to:", peer)
 		}
 	}
-	select {} //wait here
+	<-ctx.Done()
+	return nil
 }

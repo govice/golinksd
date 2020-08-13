@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"context"
 	"encoding/json"
+	"errors"
 	"log"
 	"time"
 
@@ -27,14 +28,15 @@ func handleStream(stream net.Stream) {
 	go writeData(rw)
 }
 
-func startPeer() {
+var ErrPeerPort = errors.New("peer port not assigned")
+
+func startPeer(ctx context.Context) error {
 	if !viper.IsSet("peer_port") {
-		log.Println("PEER_PORT not assigned, not starting peer")
-		return
+		return ErrPeerPort
 	}
 	hostAddress, err := maddr.NewMultiaddr("/ip4/0.0.0.0/tcp/" + viper.GetString("peer_port"))
 	if err != nil {
-		panic(err)
+		return err
 	}
 
 	var config = Config{
@@ -47,10 +49,8 @@ func startPeer() {
 	prvKey, _, err := crypto.GenerateKeyPair(crypto.RSA, 2048)
 
 	if err != nil {
-		panic(err)
+		return err
 	}
-
-	ctx := context.Background()
 
 	host, err := libp2p.New(
 		ctx,
@@ -58,7 +58,7 @@ func startPeer() {
 		libp2p.Identity(prvKey),
 	)
 	if err != nil {
-		panic(err)
+		return err
 	}
 
 	log.Println("Host created. We are:", host.ID())
@@ -68,7 +68,11 @@ func startPeer() {
 	host.SetStreamHandler(protocol.ID(config.ProtocolID), handleStream)
 
 	// go runDHT(ctx, host, config)
-	go runMDNS(ctx, host, config)
+	if err := runMDNS(ctx, host, config); err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func readData(rw *bufio.ReadWriter) {

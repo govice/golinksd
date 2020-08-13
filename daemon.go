@@ -1,6 +1,8 @@
 package main
 
 import (
+	"context"
+	"fmt"
 	"os"
 	"sync"
 	"time"
@@ -8,13 +10,20 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/kardianos/service"
 	"github.com/spf13/viper"
+	"golang.org/x/sync/errgroup"
 )
 
 var (
 	pingNodeTicker <-chan time.Time
 )
 
-type daemon struct{}
+type daemon struct {
+	cancelFuncs []context.CancelFunc
+}
+
+var (
+	g errgroup.Group
+)
 
 func (d *daemon) Run(s service.Service) error {
 	router := gin.Default()
@@ -26,20 +35,43 @@ func (d *daemon) Run(s service.Service) error {
 		blockchainService.resetChain()
 	}
 
-	go startPeer()
+	primaryContext, primaryCancel := context.WithCancel(context.Background())
+	defer func() {
+		primaryCancel()
+	}()
+	d.cancelFuncs = append(d.cancelFuncs, primaryCancel)
 
-	if err := registerFrontendRoutes(router); err != nil {
-		return err
+	if viper.GetBool("development") {
+		g.Go(func() error {
+			var frontendErr error
+			go func() {
+				if frontendErr = registerFrontendRoutes(router); frontendErr != nil {
+					return
+				}
+
+				if frontendErr = router.Run(":" + viper.GetString("port")); frontendErr != nil {
+					return
+				} // listen and serve on PORT
+			}()
+			<-primaryContext.Done()
+			return frontendErr
+		})
 	}
 
 	if err := registerAPIRoutes(router); err != nil {
 		return err
 	}
 
-	// go pingNodes()
-	if err := router.Run(":" + viper.GetString("port")); err != nil {
-		return err
-	} // listen and serve on PORT
+	p2pCtx, cancelP2P := context.WithCancel(primaryContext)
+
+	g.Go(func() error {
+		if err := startPeer(p2pCtx); err != nil {
+			return err
+		}
+
+		return nil
+	})
+	d.cancelFuncs = append(d.cancelFuncs, cancelP2P)
 
 	return nil
 }
@@ -57,6 +89,11 @@ func (d *daemon) Start(s service.Service) error {
 }
 
 func (d *daemon) Stop(s service.Service) error {
+	for i, cancel := range d.cancelFuncs {
+		fmt.Printf("canceling context %d/%d\n", i+1, len(d.cancelFuncs))
+		cancel()
+	}
+	g.Wait()
 	os.Exit(0)
 	return nil
 }
