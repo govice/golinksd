@@ -5,6 +5,7 @@
 *.so
 *.dylib
 *.volume
+golinksd
 golinks-daemon
 # Test binary, build with `go test -c`
 *.test

@@ -17,7 +17,7 @@ var (
 type daemon struct{}
 
 func (d *daemon) Run(s service.Service) error {
-	router = gin.Default()
+	router := gin.Default()
 	blockchainService = &BlockchainService{
 		mutex: sync.Mutex{},
 	}
@@ -25,16 +25,22 @@ func (d *daemon) Run(s service.Service) error {
 	if viper.GetBool("genesis") {
 		blockchainService.resetChain()
 	}
-	go startPeer()
-	go startWebserver()
 
-	apiService = &APIService{
-		router: router,
+	go startPeer()
+
+	if err := registerFrontendRoutes(router); err != nil {
+		return err
 	}
-	go apiService.startAPI()
+
+	if err := registerAPIRoutes(router); err != nil {
+		return err
+	}
 
 	// go pingNodes()
-	router.Run(":" + viper.GetString("port")) // listen and serve on PORT
+	if err := router.Run(":" + viper.GetString("port")); err != nil {
+		return err
+	} // listen and serve on PORT
+
 	return nil
 }
 
