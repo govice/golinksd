@@ -11,21 +11,16 @@ import (
 	"github.com/govice/golinks/block"
 )
 
-type APIService struct {
-	router *gin.Engine
-}
-
-var apiService *APIService
-
-func (service *APIService) startAPI() {
-	r := service.router
-	apiGroup := r.Group("/api")
+func registerAPIRoutes(router *gin.Engine) error {
+	apiGroup := router.Group("/api")
 	apiGroup.Use(externalAuthenticator())
 	{
 		apiGroup.POST("/chain", postBlockEndpoint)
 		apiGroup.GET("/chain", getChainEndpoint)
 		apiGroup.POST("/chain/find", findBlockEndpoint)
 	}
+
+	return nil
 }
 
 func externalAuthenticator() gin.HandlerFunc {

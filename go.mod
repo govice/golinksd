@@ -1,4 +1,4 @@
-module github.com/govice/golinksd
+module github.com/govice/golinks-daemon
 
 go 1.12
 

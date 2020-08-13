@@ -7,7 +7,7 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-func registerConsoleHandlers(router *gin.Engine) {
+func registerConsoleHandlers(router *gin.Engine) error {
 	router.GET("/ping", func(c *gin.Context) {
 		c.JSON(200, gin.H{
 			"message": "pong",
@@ -59,6 +59,7 @@ func registerConsoleHandlers(router *gin.Engine) {
 		c.Redirect(http.StatusSeeOther, "/console")
 	})
 
+	return nil
 }
 
 var consoleCards = []ConsoleCard{

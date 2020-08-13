@@ -8,11 +8,9 @@ import (
 	"github.com/spf13/viper"
 )
 
-var router *gin.Engine
-
 var ledger Ledger
 
-func startWebserver() {
+func registerFrontendRoutes(router *gin.Engine) error {
 	templatesHome := viper.GetString("templates_home")
 	log.Println("Templates Home: " + templatesHome)
 	if templatesHome != "" {
@@ -26,6 +24,10 @@ func startWebserver() {
 		})
 	})
 
-	registerConsoleHandlers(router)
+	if err := registerConsoleHandlers(router); err != nil {
+		return err
+	}
+
+	return nil
 
 }
