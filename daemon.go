@@ -2,8 +2,6 @@ package main
 
 import (
 	"context"
-	"fmt"
-	"os"
 	"sync"
 	"time"
 
@@ -25,7 +23,7 @@ var (
 	g errgroup.Group
 )
 
-func (d *daemon) Run(s service.Service) error {
+func (d *daemon) run(s service.Service) error {
 	router := gin.Default()
 	blockchainService = &BlockchainService{
 		mutex: sync.Mutex{},
@@ -62,16 +60,16 @@ func (d *daemon) Run(s service.Service) error {
 		return err
 	}
 
-	p2pCtx, cancelP2P := context.WithCancel(primaryContext)
+	daemonCtx, cancelDaemon := context.WithCancel(primaryContext)
 
 	g.Go(func() error {
-		if err := startPeer(p2pCtx); err != nil {
+		if err := startHost(daemonCtx); err != nil {
 			return err
 		}
 
 		return nil
 	})
-	d.cancelFuncs = append(d.cancelFuncs, cancelP2P)
+	d.cancelFuncs = append(d.cancelFuncs, cancelDaemon)
 
 	return nil
 }
@@ -84,16 +82,16 @@ func pingNodes() {
 }
 
 func (d *daemon) Start(s service.Service) error {
-	d.Run(s)
+	go d.run(s)
 	return nil
 }
 
 func (d *daemon) Stop(s service.Service) error {
+	//TODO hold primary context and use it to cancel children?
 	for i, cancel := range d.cancelFuncs {
-		fmt.Printf("canceling context %d/%d\n", i+1, len(d.cancelFuncs))
+		logf("canceling context %d/%d\n", i+1, len(d.cancelFuncs))
 		cancel()
 	}
 	g.Wait()
-	os.Exit(0)
 	return nil
 }

@@ -17,6 +17,10 @@ func logln(v ...interface{}) {
 	logLogger.Println(v...)
 }
 
+func logf(format string, v ...interface{}) {
+	logLogger.Printf(format, v...)
+}
+
 func errln(v ...interface{}) {
 	errorLogger.Println(v...)
 }
