@@ -75,7 +75,7 @@ func generateBlockmap(rootPath string) error {
 		return err
 	}
 
-	logln("saved blockmap" < fileUUID.String())
+	logln("saved blockmap", fileUUID.String())
 
 	return nil
 }

@@ -6,8 +6,8 @@ import (
 )
 
 var stdOutLogger = log.New(os.Stdout, "", log.Ltime)
-var logLogger = log.New(os.Stderr, "log: ", log.Ltime)
-var errorLogger = log.New(os.Stderr, "error: ", log.Ltime)
+var logLogger = log.New(os.Stderr, "golinksd LOG: ", log.Ltime)
+var errorLogger = log.New(os.Stderr, "golinksd ERROR: ", log.Ltime)
 
 func println(v ...interface{}) {
 	stdOutLogger.Println(v...)
