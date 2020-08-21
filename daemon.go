@@ -17,20 +17,14 @@ var (
 
 type daemon struct {
 	cancelFuncs []context.CancelFunc
+	service     service.Service
 }
 
 var (
 	g errgroup.Group
 )
 
-func (d *daemon) run(s service.Service) error {
-	defer func() {
-		if service.Interactive() {
-			d.Stop(s)
-		} else {
-			d.Stop(s)
-		}
-	}()
+func (d *daemon) run() error {
 
 	router := gin.Default()
 	blockchainService = &BlockchainService{
@@ -89,7 +83,7 @@ func pingNodes() {
 }
 
 func (d *daemon) Start(s service.Service) error {
-	go d.run(s)
+	go d.run()
 	return nil
 }
 
