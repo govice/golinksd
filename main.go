@@ -50,13 +50,15 @@ func main() {
 		fatalln(err)
 	}
 
+	d.service = s
+
+	//TODO refactor to use system logger
 	daemonLogger, err = s.Logger(nil)
 	if err != nil {
 		fatalln(err)
 	}
 
-	err = s.Run()
-	if err != nil {
+	if err = s.Run(); err != nil {
 		daemonLogger.Error(err)
 	}
 }
