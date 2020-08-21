@@ -24,6 +24,14 @@ var (
 )
 
 func (d *daemon) run(s service.Service) error {
+	defer func() {
+		if service.Interactive() {
+			d.Stop(s)
+		} else {
+			d.Stop(s)
+		}
+	}()
+
 	router := gin.Default()
 	blockchainService = &BlockchainService{
 		mutex: sync.Mutex{},
@@ -34,9 +42,7 @@ func (d *daemon) run(s service.Service) error {
 	}
 
 	primaryContext, primaryCancel := context.WithCancel(context.Background())
-	defer func() {
-		primaryCancel()
-	}()
+
 	d.cancelFuncs = append(d.cancelFuncs, primaryCancel)
 
 	if viper.GetBool("development") {
@@ -71,6 +77,7 @@ func (d *daemon) run(s service.Service) error {
 	})
 	d.cancelFuncs = append(d.cancelFuncs, cancelDaemon)
 
+	<-primaryContext.Done()
 	return nil
 }
 
