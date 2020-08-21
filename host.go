@@ -28,6 +28,7 @@ func startHost(ctx context.Context) error {
 		return err
 	}
 	period := viper.GetInt("generation_period")
+	logln("generation_period:", period, "ms")
 	generationTicker := time.NewTicker(time.Duration(period) * time.Millisecond)
 	logln("generating startup blockmap")
 	if err := generateBlockmap(absRootPath); err != nil {
@@ -39,9 +40,11 @@ func startHost(ctx context.Context) error {
 	for {
 		select {
 		case <-ctx.Done():
+			logln("received termination on host context")
 			generationTicker.Stop()
 			return nil //TODO err canceled?
 		case <-generationTicker.C:
+			logln("generating scheduled blockmap for tick")
 			if err := generateBlockmap(absRootPath); err != nil {
 				errln("scheduled blockmap generation failed")
 				return err
