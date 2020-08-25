@@ -8,6 +8,7 @@ require (
 	github.com/govice/golinks v0.1.1
 	github.com/kardianos/service v1.1.0
 	github.com/kr/pretty v0.2.0 // indirect
+	github.com/manifoldco/promptui v0.7.0
 	github.com/minio/sha256-simd v0.1.1 // indirect
 	github.com/mr-tron/base58 v1.2.0 // indirect
 	github.com/multiformats/go-multiaddr v0.2.2
