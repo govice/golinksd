@@ -12,10 +12,18 @@ import (
 	"github.com/spf13/viper"
 )
 
+type Worker struct {
+	daemon *daemon
+}
+
+func NewWorker(daemon *daemon) (*Worker, error) {
+	return &Worker{daemon: daemon}, nil
+}
+
 var ErrBadRootPath = errors.New("bad root_path")
 
-func startHost(ctx context.Context) error {
-	logln("starting host")
+func (w *Worker) Execute(ctx context.Context) error {
+	logln("starting worker")
 	// TODO pull this from its own config file(s)
 	rootPath := viper.GetString("root_path")
 	fi, err := os.Stat(rootPath)
@@ -31,7 +39,7 @@ func startHost(ctx context.Context) error {
 	logln("generation_period:", period, "ms")
 	generationTicker := time.NewTicker(time.Duration(period) * time.Millisecond)
 	logln("generating startup blockmap")
-	if err := generateBlockmap(absRootPath); err != nil {
+	if err := w.generateBlockmap(absRootPath); err != nil {
 		errln("initial blockmap generation failed")
 		return err
 	}
@@ -45,7 +53,7 @@ func startHost(ctx context.Context) error {
 			return nil //TODO err canceled?
 		case <-generationTicker.C:
 			logln("generating scheduled blockmap for tick")
-			if err := generateBlockmap(absRootPath); err != nil {
+			if err := w.generateBlockmap(absRootPath); err != nil {
 				errln("scheduled blockmap generation failed")
 				return err
 			}
@@ -53,7 +61,7 @@ func startHost(ctx context.Context) error {
 	}
 }
 
-func generateBlockmap(rootPath string) error {
+func (w *Worker) generateBlockmap(rootPath string) error {
 	logln("initializing blockmap for", rootPath)
 	blkmap := blockmap.New(rootPath)
 	if err := blkmap.Generate(); err != nil {

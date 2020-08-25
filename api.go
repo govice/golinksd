@@ -11,18 +11,6 @@ import (
 	"github.com/govice/golinks/block"
 )
 
-func registerAPIRoutes(router *gin.Engine) error {
-	apiGroup := router.Group("/api")
-	apiGroup.Use(externalAuthenticator())
-	{
-		apiGroup.POST("/chain", postBlockEndpoint)
-		apiGroup.GET("/chain", getChainEndpoint)
-		apiGroup.POST("/chain/find", findBlockEndpoint)
-	}
-
-	return nil
-}
-
 func externalAuthenticator() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		userAuth := &externalUserAuth{

@@ -2,10 +2,8 @@ package main
 
 import (
 	"context"
-	"sync"
 	"time"
 
-	"github.com/gin-gonic/gin"
 	"github.com/kardianos/service"
 	"github.com/spf13/viper"
 	"golang.org/x/sync/errgroup"
@@ -16,58 +14,81 @@ var (
 )
 
 type daemon struct {
-	cancelFuncs []context.CancelFunc
-	service     service.Service
+	cancelFuncs       []context.CancelFunc
+	service           service.Service
+	logger            service.Logger
+	errorGroup        errgroup.Group
+	blockchainService *BlockchainService
+	webserver         *Webserver
+	worker            *Worker
 }
 
-var (
-	g errgroup.Group
-)
+func NewDaemon() (*daemon, error) {
+	d := &daemon{}
+	serviceConfig := &service.Config{
+		Name:        "golinksd",
+		DisplayName: "golinksd",
+		Description: "golinks daemon",
+	}
+
+	s, err := service.New(d, serviceConfig)
+	if err != nil {
+		return nil, err
+	}
+	d.service = s
+
+	d.logger, err = s.Logger(nil)
+	if err != nil {
+		return nil, err
+	}
+
+	webserver, err := NewWebserver(d)
+	if err != nil {
+		errln("failed to initialize webserver")
+		return nil, err
+	}
+	d.webserver = webserver
+
+	worker, err := NewWorker(d)
+	if err != nil {
+		errln("failed to initialize worker")
+		return nil, err
+	}
+	d.worker = worker
+
+	bs, err := NewBlockchainService(d)
+	if err != nil {
+		errln("failed to initialize blockchain service")
+		return nil, err
+	}
+	d.blockchainService = bs
+
+	return d, nil
+}
+
+func (d *daemon) Execute() error {
+	if err := d.service.Run(); err != nil {
+		return err
+	}
+	return nil
+}
 
 func (d *daemon) run() error {
-
-	router := gin.Default()
-	blockchainService = &BlockchainService{
-		mutex: sync.Mutex{},
-	}
-	//TODO load blockchain from file
-	if viper.GetBool("genesis") {
-		blockchainService.resetChain()
-	}
 
 	primaryContext, primaryCancel := context.WithCancel(context.Background())
 
 	d.cancelFuncs = append(d.cancelFuncs, primaryCancel)
 
 	if viper.GetBool("development") {
-		g.Go(func() error {
-			var frontendErr error
-			go func() {
-				if frontendErr = registerFrontendRoutes(router); frontendErr != nil {
-					return
-				}
-
-				if frontendErr = router.Run(":" + viper.GetString("port")); frontendErr != nil {
-					return
-				} // listen and serve on PORT
-			}()
-			<-primaryContext.Done()
-			return frontendErr
+		d.errorGroup.Go(func() error {
+			return d.ExecuteFrontend(primaryContext)
 		})
 	}
 
-	if err := registerAPIRoutes(router); err != nil {
-		return err
-	}
+	workerCtx, cancelDaemon := context.WithCancel(primaryContext)
 
-	daemonCtx, cancelDaemon := context.WithCancel(primaryContext)
-
-	g.Go(func() error {
-		if err := startHost(daemonCtx); err != nil {
-			return err
-		}
-
-		return nil
+	d.errorGroup.Go(func() error {
+		return d.ExecuteWorker(workerCtx)
 	})
 	d.cancelFuncs = append(d.cancelFuncs, cancelDaemon)
 
@@ -75,11 +96,20 @@ func (d *daemon) run() error {
 	return nil
 }
 
-func pingNodes() {
-	pingNodeTicker = time.Tick(15 * time.Second)
-	for range pingNodeTicker {
-		ledger.PingNodes()
-	}
+func (d *daemon) ExecuteFrontend(ctx context.Context) error {
+	var frontendErr error
+	go func() {
+		if err := d.webserver.Execute(); err != nil {
+			frontendErr = err
+			return
+		}
+	}()
+	<-ctx.Done()
+	return frontendErr
+}
+
+func (d *daemon) ExecuteWorker(ctx context.Context) error {
+	return d.worker.Execute(ctx)
 }
 
 func (d *daemon) Start(s service.Service) error {
@@ -93,6 +123,6 @@ func (d *daemon) Stop(s service.Service) error {
 		logf("canceling context %d/%d\n", i+1, len(d.cancelFuncs))
 		cancel()
 	}
-	g.Wait()
+	d.errorGroup.Wait()
 	return nil
 }

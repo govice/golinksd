@@ -7,7 +7,8 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-func registerConsoleHandlers(router *gin.Engine) error {
+func (w *Webserver) registerConsoleHandlers() error {
+	router := w.router
 	router.GET("/ping", func(c *gin.Context) {
 		c.JSON(200, gin.H{
 			"message": "pong",

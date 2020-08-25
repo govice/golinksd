@@ -7,14 +7,33 @@ import (
 
 	"github.com/govice/golinks/block"
 	"github.com/govice/golinks/blockchain"
+	"github.com/spf13/viper"
 )
 
 type BlockchainService struct {
-	mutex sync.Mutex
-	chain *blockchain.Blockchain
+	mutex  sync.Mutex
+	chain  *blockchain.Blockchain
+	daemon *daemon
 }
 
 var blockchainService *BlockchainService
+
+func NewBlockchainService(daemon *daemon) (*BlockchainService, error) {
+	bs := &BlockchainService{
+		daemon: daemon,
+	}
+
+	//TODO remove with load ledger
+	if viper.GetBool("genesis") {
+		blockchainService.resetChain()
+	}
+
+	if err := bs.LoadLedger(); err != nil {
+		return nil, err
+	}
+
+	return bs, nil
+}
 
 func (service *BlockchainService) addBlock(content []byte) (*block.Block, error) {
 	service.mutex.Lock()
@@ -145,4 +164,14 @@ func (service *BlockchainService) Chain() *blockchain.Blockchain {
 	defer service.unlock()
 
 	return service.chain
+}
+
+func (service *BlockchainService) RequestGCI() int {
+
+	return 0
+}
+
+func (service *BlockchainService) LoadLedger() error {
+
+	return nil
 }

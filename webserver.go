@@ -8,26 +8,62 @@ import (
 	"github.com/spf13/viper"
 )
 
-var ledger Ledger
+type Webserver struct {
+	router *gin.Engine
+	daemon *daemon
+}
 
-func registerFrontendRoutes(router *gin.Engine) error {
+func NewWebserver(daemon *daemon) (*Webserver, error) {
+	w := &Webserver{
+		router: gin.Default(),
+		daemon: daemon,
+	}
+
+	if err := w.registerFrontendRoutes(); err != nil {
+		errln("failed to initialize frontend routes")
+		return nil, err
+	}
+
+	if err := w.registerAPIRoutes(); err != nil {
+		return nil, err
+	}
+
+	return w, nil
+}
+
+func (w *Webserver) registerFrontendRoutes() error {
 	templatesHome := viper.GetString("templates_home")
 	log.Println("Templates Home: " + templatesHome)
 	if templatesHome != "" {
-		router.LoadHTMLGlob(templatesHome + "/*")
+		w.router.LoadHTMLGlob(templatesHome + "/*")
 	} else {
-		router.LoadHTMLGlob("./templates/*")
+		w.router.LoadHTMLGlob("./templates/*")
 	}
-	router.GET("/error", func(c *gin.Context) {
+	w.router.GET("/error", func(c *gin.Context) {
 		c.HTML(http.StatusOK, "error.html", gin.H{
 			"title": "GoLinks | Error",
 		})
 	})
 
-	if err := registerConsoleHandlers(router); err != nil {
-		return err
+	return w.registerConsoleHandlers()
+}
+
+func (w *Webserver) registerAPIRoutes() error {
+	apiGroup := w.router.Group("/api")
+	apiGroup.Use(externalAuthenticator())
+	{
+		apiGroup.POST("/chain", postBlockEndpoint)
+		apiGroup.GET("/chain", getChainEndpoint)
+		apiGroup.POST("/chain/find", findBlockEndpoint)
 	}
 
 	return nil
+}
 
+func (w *Webserver) Execute() error {
+	if err := w.router.Run(":" + viper.GetString("port")); err != nil {
+		return err
+	} // listen and serve on PORT
+
+	return nil
 }
