@@ -28,10 +28,6 @@ func NewBlockchainService(daemon *daemon) (*BlockchainService, error) {
 		blockchainService.resetChain()
 	}
 
-	if err := bs.LoadLedger(); err != nil {
-		return nil, err
-	}
-
 	return bs, nil
 }
 
@@ -169,9 +165,4 @@ func (service *BlockchainService) Chain() *blockchain.Blockchain {
 func (service *BlockchainService) RequestGCI() int {
 
 	return 0
-}
-
-func (service *BlockchainService) LoadLedger() error {
-
-	return nil
 }

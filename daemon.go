@@ -19,12 +19,57 @@ type daemon struct {
 	logger            service.Logger
 	errorGroup        errgroup.Group
 	blockchainService *BlockchainService
+	configService     *ConfigService
+	golinksService    *GolinksService
 	webserver         *Webserver
 	worker            *Worker
+	chainTracker      *ChainTracker
 }
 
 func NewDaemon() (*daemon, error) {
+	// SERVICES
 	d := &daemon{}
+	cs, err := NewConfigService(d)
+	if err != nil {
+		errln("failed to initialize configuration service")
+	}
+	d.configService = cs
+
+	bs, err := NewBlockchainService(d)
+	if err != nil {
+		errln("failed to initialize blockchain service")
+		return nil, err
+	}
+	d.blockchainService = bs
+
+	gs, err := NewGolinksService(d)
+	if err != nil {
+		errln("failed to iniitalize golinks service")
+	}
+	d.golinksService = gs
+
+	// WORKERS
+	webserver, err := NewWebserver(d)
+	if err != nil {
+		errln("failed to initialize webserver")
+		return nil, err
+	}
+	d.webserver = webserver
+
+	worker, err := NewWorker(d)
+	if err != nil {
+		errln("failed to initialize worker")
+		return nil, err
+	}
+	d.worker = worker
+
+	ct, err := NewChainTracker(d)
+	if err != nil {
+		errln("failed to initialize chain tracker")
+	}
+	d.chainTracker = ct
+
+	// DAEMON CONFIG
 	serviceConfig := &service.Config{
 		Name:        "golinksd",
 		DisplayName: "golinksd",
@@ -41,27 +86,6 @@ func NewDaemon() (*daemon, error) {
 	if err != nil {
 		return nil, err
 	}
-
-	webserver, err := NewWebserver(d)
-	if err != nil {
-		errln("failed to initialize webserver")
-		return nil, err
-	}
-	d.webserver = webserver
-
-	worker, err := NewWorker(d)
-	if err != nil {
-		errln("failed to initialize worker")
-		return nil, err
-	}
-	d.worker = worker
-
-	bs, err := NewBlockchainService(d)
-	if err != nil {
-		errln("failed to initialize blockchain service")
-		return nil, err
-	}
-	d.blockchainService = bs
 
 	return d, nil
 }
@@ -92,20 +116,18 @@ func (d *daemon) run() error {
 	})
 	d.cancelFuncs = append(d.cancelFuncs, cancelDaemon)
 
+	chainTrackerCtx, cancelChainTracker := context.WithCancel(primaryContext)
+	d.errorGroup.Go(func() error {
+		return d.ExecuteChainTracker(chainTrackerCtx)
+	})
+	d.cancelFuncs = append(d.cancelFuncs, cancelChainTracker)
+
 	<-primaryContext.Done()
 	return nil
 }
 
 func (d *daemon) ExecuteFrontend(ctx context.Context) error {
-	var frontendErr error
-	go func() {
-		if err := d.webserver.Execute(); err != nil {
-			frontendErr = err
-			return
-		}
-	}()
-	<-ctx.Done()
-	return frontendErr
+	return d.webserver.Execute(ctx)
 }
 
 func (d *daemon) ExecuteWorker(ctx context.Context) error {
@@ -125,4 +147,12 @@ func (d *daemon) Stop(s service.Service) error {
 	}
 	d.errorGroup.Wait()
 	return nil
+}
+
+func (d *daemon) HomeDir() string {
+	return d.configService.HomeDir()
+}
+
+func (d *daemon) ExecuteChainTracker(ctx context.Context) error {
+	return d.chainTracker.Execute(ctx)
 }

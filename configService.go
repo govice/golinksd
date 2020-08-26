@@ -14,8 +14,28 @@ import (
 	"github.com/spf13/viper"
 )
 
-func setupConfig() error {
-	daemonHome := HomeDir()
+type ConfigService struct {
+	daemon *daemon
+	token  *JWT
+}
+
+func NewConfigService(daemon *daemon) (*ConfigService, error) {
+	cs := &ConfigService{
+		daemon: daemon,
+	}
+	if err := cs.setupConfig(); err != nil {
+		return nil, err
+	}
+
+	if err := cs.checkLogin(); err != nil {
+		return nil, err
+	}
+
+	return cs, nil
+}
+
+func (cs *ConfigService) setupConfig() error {
+	daemonHome := cs.HomeDir()
 
 	os.Mkdir(daemonHome, os.ModePerm)
 
@@ -49,16 +69,16 @@ func setupConfig() error {
 
 var ErrInvalidLedger = errors.New("failed to load ledger from config")
 
-func HomeDir() string {
+func (cs *ConfigService) HomeDir() string {
 	homeDir, _ := os.UserHomeDir()
 	return filepath.Join(homeDir, ".golinksd")
 }
 
-func checkLogin() error {
-	tokenPath := filepath.Join(HomeDir(), "credentials.json")
+func (cs *ConfigService) checkLogin() error {
+	tokenPath := filepath.Join(cs.HomeDir(), "credentials.json")
 
 	if _, err := os.Stat(tokenPath); errors.Is(err, os.ErrNotExist) {
-		token, err := promptLogin()
+		token, err := cs.promptLogin()
 		if err != nil {
 			errln("failed to prompt login:", err)
 			return err
@@ -73,11 +93,25 @@ func checkLogin() error {
 		if err := ioutil.WriteFile(tokenPath, tokenBytes, os.ModePerm); err != nil {
 			errln("failed to write credentials file:", err)
 		}
+		cs.token = token
+	} else {
+		tokenBytes, err := ioutil.ReadFile(tokenPath)
+		if err != nil {
+			errln("failed to read token file", err)
+			return err
+		}
+
+		token := &JWT{}
+		if err := json.Unmarshal(tokenBytes, token); err != nil {
+			errln("failed to unmarshal token", err)
+			return err
+		}
+		cs.token = token
 	}
 	return nil
 }
 
-func promptLogin() (*JWT, error) {
+func (cs *ConfigService) promptLogin() (*JWT, error) {
 	promptEmail := promptui.Prompt{
 		Label: "Email",
 	}
@@ -98,12 +132,12 @@ func promptLogin() (*JWT, error) {
 		return nil, err
 	}
 
-	return authenticate(email, password)
+	return cs.authenticate(email, password)
 }
 
 var ErrFailedAuthentication = errors.New(("failed to authenticate"))
 
-func authenticate(email, password string) (*JWT, error) {
+func (cs *ConfigService) authenticate(email, password string) (*JWT, error) {
 	loginPayload, err := json.Marshal(gin.H{
 		"email":    email,
 		"password": password,

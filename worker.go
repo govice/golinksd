@@ -48,7 +48,7 @@ func (w *Worker) Execute(ctx context.Context) error {
 	for {
 		select {
 		case <-ctx.Done():
-			logln("received termination on host context")
+			logln("received termination on worker context")
 			generationTicker.Stop()
 			return nil //TODO err canceled?
 		case <-generationTicker.C:
@@ -69,7 +69,7 @@ func (w *Worker) generateBlockmap(rootPath string) error {
 		return err
 	}
 
-	jobsDir := filepath.Join(HomeDir(), "jobs")
+	jobsDir := filepath.Join(w.daemon.HomeDir(), "jobs")
 	//TODO handle error
 	os.Mkdir(jobsDir, os.ModePerm)
 

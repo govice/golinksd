@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"log"
 	"net/http"
 
@@ -50,20 +51,25 @@ func (w *Webserver) registerFrontendRoutes() error {
 
 func (w *Webserver) registerAPIRoutes() error {
 	apiGroup := w.router.Group("/api")
-	apiGroup.Use(externalAuthenticator())
+	apiGroup.Use(w.externalAuthenticator())
 	{
-		apiGroup.POST("/chain", postBlockEndpoint)
-		apiGroup.GET("/chain", getChainEndpoint)
-		apiGroup.POST("/chain/find", findBlockEndpoint)
+		apiGroup.POST("/chain", w.postBlockEndpoint)
+		apiGroup.GET("/chain", w.getChainEndpoint)
+		apiGroup.POST("/chain/find", w.findBlockEndpoint)
 	}
 
 	return nil
 }
 
-func (w *Webserver) Execute() error {
-	if err := w.router.Run(":" + viper.GetString("port")); err != nil {
-		return err
-	} // listen and serve on PORT
+func (w *Webserver) Execute(ctx context.Context) error {
+	var frontendErr error
+	go func() {
+		if err := w.router.Run(":" + viper.GetString("port")); err != nil {
+			frontendErr = err
+		} // listen and serve on PORT
+	}()
+	<-ctx.Done()
+	logln("received termination on webserver context")
 
-	return nil
+	return frontendErr
 }
