@@ -161,8 +161,3 @@ func (service *BlockchainService) Chain() *blockchain.Blockchain {
 
 	return service.chain
 }
-
-func (service *BlockchainService) RequestGCI() int {
-
-	return 0
-}
