@@ -23,6 +23,7 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/govice/golinks/block"
@@ -30,12 +31,15 @@ import (
 )
 
 type ChainTracker struct {
-	daemon *daemon
+	daemon        *daemon
+	forceSyncChan chan time.Time
+	syncWaitGroup sync.WaitGroup
 }
 
 func NewChainTracker(daemon *daemon) (*ChainTracker, error) {
 	return &ChainTracker{
-		daemon: daemon,
+		daemon:        daemon,
+		forceSyncChan: make(chan time.Time),
 	}, nil
 }
 
@@ -47,14 +51,16 @@ func (ct *ChainTracker) Execute(ctx context.Context) error {
 	trackingPeriod := viper.GetInt("tracking_period")
 	logln("tracking period:", trackingPeriod)
 	syncTicker := time.NewTicker(time.Millisecond * time.Duration(trackingPeriod))
-	if err := ct.checkAndSync(); err != nil {
-		errln("initial check and sync failed", err)
-	}
 	for {
 		select {
 		case <-syncTicker.C:
 			if err := ct.checkAndSync(); err != nil {
 				errln("check and sync failed", err)
+			}
+		case t := <-ct.forceSyncChan:
+			logln("received force sync", t.String())
+			if err := ct.checkAndSync(); err != nil {
+				errln("force sync failed", err)
 			}
 		case <-ctx.Done():
 			logln("received termination on chain tracker context")
@@ -73,8 +79,8 @@ func (ct *ChainTracker) chainDir() string {
 }
 
 func (ct *ChainTracker) checkAndSync() error {
-	ct.daemon.chainMutex.Lock()
-	defer ct.daemon.chainMutex.Unlock()
+	ct.syncWaitGroup.Add(1)
+	defer ct.syncWaitGroup.Done()
 	syncInfo, err := ct.getSyncInfo()
 	if err != nil {
 		errln("failed to get sync info:", err)
@@ -90,7 +96,7 @@ func (ct *ChainTracker) checkAndSync() error {
 			return err
 		}
 	} else {
-		logln("local chain update to date with remote")
+		logln("local chain up-to-date with remote")
 	}
 
 	return nil

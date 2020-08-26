@@ -55,6 +55,7 @@ func (w *Worker) Execute(ctx context.Context) error {
 	logln("generation_period:", period, "ms")
 	generationTicker := time.NewTicker(time.Duration(period) * time.Millisecond)
 	logln("generating startup blockmap")
+
 	if err := w.generateAndUploadBlockmap(absRootPath); err != nil {
 		errln("initial blockmap generation failed")
 		return err
@@ -71,15 +72,15 @@ func (w *Worker) Execute(ctx context.Context) error {
 			logln("generating scheduled blockmap for tick")
 			if err := w.generateAndUploadBlockmap(absRootPath); err != nil {
 				errln("scheduled blockmap generation failed")
-				return err
 			}
 		}
 	}
 }
 
 func (w *Worker) generateAndUploadBlockmap(rootPath string) error {
-	w.daemon.chainMutex.Lock()
-	defer w.daemon.chainMutex.Unlock()
+	logln("sending force sync to chain tracker")
+	w.daemon.chainTracker.forceSyncChan <- time.Now()
+	w.daemon.chainTracker.syncWaitGroup.Wait()
 	blkmap, err := w.generateBlockmap(rootPath)
 	if err != nil {
 		errln("failed to generate blockmap", err)
