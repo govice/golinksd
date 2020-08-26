@@ -4,7 +4,6 @@ go 1.12
 
 require (
 	github.com/gin-gonic/gin v1.6.3
-	github.com/google/uuid v1.1.1
 	github.com/govice/golinks v0.1.1
 	github.com/kardianos/service v1.1.0
 	github.com/kr/pretty v0.2.0 // indirect
