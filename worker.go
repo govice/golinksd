@@ -2,12 +2,14 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"os"
 	"path/filepath"
 	"time"
 
-	"github.com/google/uuid"
+	"github.com/govice/golinks/block"
+	"github.com/govice/golinks/blockchain"
 	"github.com/govice/golinks/blockmap"
 	"github.com/spf13/viper"
 )
@@ -39,7 +41,7 @@ func (w *Worker) Execute(ctx context.Context) error {
 	logln("generation_period:", period, "ms")
 	generationTicker := time.NewTicker(time.Duration(period) * time.Millisecond)
 	logln("generating startup blockmap")
-	if err := w.generateBlockmap(absRootPath); err != nil {
+	if err := w.generateAndUploadBlockmap(absRootPath); err != nil {
 		errln("initial blockmap generation failed")
 		return err
 	}
@@ -53,7 +55,7 @@ func (w *Worker) Execute(ctx context.Context) error {
 			return nil //TODO err canceled?
 		case <-generationTicker.C:
 			logln("generating scheduled blockmap for tick")
-			if err := w.generateBlockmap(absRootPath); err != nil {
+			if err := w.generateAndUploadBlockmap(absRootPath); err != nil {
 				errln("scheduled blockmap generation failed")
 				return err
 			}
@@ -61,29 +63,57 @@ func (w *Worker) Execute(ctx context.Context) error {
 	}
 }
 
-func (w *Worker) generateBlockmap(rootPath string) error {
-	logln("initializing blockmap for", rootPath)
+func (w *Worker) generateAndUploadBlockmap(rootPath string) error {
+	w.daemon.chainMutex.Lock()
+	defer w.daemon.chainMutex.Unlock()
+	blkmap, err := w.generateBlockmap(rootPath)
+	if err != nil {
+		errln("failed to generate blockmap", err)
+		return err
+	}
+
+	blockmapBytes, err := json.Marshal(blkmap)
+	if err != nil {
+		errln("failed to marshal blockmap")
+		return err
+	}
+
+	localHeadBlock, err := w.daemon.chainTracker.LocalHead()
+	if err != nil {
+		errln("failed to get local head block", err)
+		return err
+	}
+
+	stagedBlock := block.NewSHA512(localHeadBlock.Index+1, blockmapBytes, localHeadBlock.BlockHash)
+
+	subchain := &blockchain.Blockchain{
+		Blocks: []block.Block{*localHeadBlock, *stagedBlock},
+	}
+
+	if err := subchain.Validate(); err != nil {
+		errln("failed to validate subchain")
+		return err
+	}
+
+	if err := w.uploadBlock(stagedBlock); err != nil {
+		errln("failed to upload staged block")
+		return err
+	}
+
+	return nil
+}
+
+func (w *Worker) generateBlockmap(rootPath string) (*blockmap.BlockMap, error) {
+	logln("generating blockmap for", rootPath)
 	blkmap := blockmap.New(rootPath)
 	if err := blkmap.Generate(); err != nil {
 		errln("failed to generate blockmap for", rootPath, err)
-		return err
+		return nil, err
 	}
 
-	jobsDir := filepath.Join(w.daemon.HomeDir(), "jobs")
-	//TODO handle error
-	os.Mkdir(jobsDir, os.ModePerm)
+	return blkmap, nil
+}
 
-	fileUUID, err := uuid.NewRandom()
-	if err != nil {
-		errln("failed to generate blockmap uuid", err)
-		return err
-	}
-	if err := blkmap.SaveNamed(jobsDir, fileUUID.String()); err != nil {
-		errln("failed to save blockmap", err)
-		return err
-	}
-
-	logln("saved blockmap", fileUUID.String())
-
-	return nil
+func (w *Worker) uploadBlock(blk *block.Block) error {
+	return w.daemon.golinksService.UploadBlock(blk)
 }

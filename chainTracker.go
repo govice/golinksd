@@ -58,6 +58,8 @@ func (ct *ChainTracker) chainDir() string {
 }
 
 func (ct *ChainTracker) checkAndSync() error {
+	ct.daemon.chainMutex.Lock()
+	defer ct.daemon.chainMutex.Unlock()
 	syncInfo, err := ct.getSyncInfo()
 	if err != nil {
 		errln("failed to get sync info:", err)
@@ -168,6 +170,27 @@ func (ct *ChainTracker) requestBlockRange(startIndex, endIndex int) ([]*block.Bl
 		blocks = append(blocks, block)
 	}
 	return blocks, nil
+}
+
+func (ct *ChainTracker) LocalHead() (*block.Block, error) {
+	files, err := ioutil.ReadDir(ct.chainDir())
+	if err != nil {
+		return nil, err
+	}
+
+	fileAbs := filepath.Join(ct.chainDir(), files[len(files)-1].Name())
+
+	blockBytes, err := ioutil.ReadFile(fileAbs)
+	if err != nil {
+		return nil, err
+	}
+
+	b := &block.Block{}
+	if err := json.Unmarshal(blockBytes, b); err != nil {
+		return nil, err
+	}
+
+	return b, nil
 }
 
 type SyncInfo struct {

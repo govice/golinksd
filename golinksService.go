@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"encoding/json"
 	"errors"
 	"io/ioutil"
@@ -92,4 +93,31 @@ func (gs *GolinksService) GetBlock(index int) (*block.Block, error) {
 	}
 
 	return b, nil
+}
+
+var ErrFailedBlockUpload = errors.New("failed to upload block")
+
+func (gs *GolinksService) UploadBlock(blk *block.Block) error {
+	blockBytes, err := json.Marshal(blk)
+	if err != nil {
+		return err
+	}
+
+	req, err := http.NewRequest("POST", viper.GetString("chain_block_endpoint"), bytes.NewBuffer(blockBytes))
+	if err != nil {
+		return err
+	}
+
+	req.Header.Add("Authorization", gs.BearerToken())
+
+	res, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return err
+	}
+
+	if res.StatusCode != http.StatusOK {
+		return ErrFailedBlockUpload
+	}
+
+	return nil
 }

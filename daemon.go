@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"sync"
 	"time"
 
 	"github.com/kardianos/service"
@@ -24,6 +25,8 @@ type daemon struct {
 	webserver         *Webserver
 	worker            *Worker
 	chainTracker      *ChainTracker
+
+	chainMutex sync.Mutex
 }
 
 func NewDaemon() (*daemon, error) {
