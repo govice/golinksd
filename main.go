@@ -1,120 +1,33 @@
+// Copyright 2020 Kevin Gentile
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 package main
 
 import (
-	"encoding/json"
-	"errors"
-	"io/ioutil"
-	"log"
-	"os"
-	"path/filepath"
-
-	maddr "github.com/multiformats/go-multiaddr"
 	"github.com/spf13/viper"
-
-	"github.com/kardianos/service"
 )
 
-var daemonLogger service.Logger
-
-type Config struct {
-	RendezvousString string
-	BootstrapPeers   []maddr.Multiaddr
-	ListenAddresses  []maddr.Multiaddr
-	ProtocolID       string
-}
-
 func main() {
-	if err := setupConfig(); err != nil {
-		fatalln(err)
-	}
-
-	l, err := loadLedger()
-	if err != nil {
-		fatalln(err)
-	}
-	ledger = *l
-	logln(ledger)
-
-	log.Println("PORT: " + viper.GetString("port"))
-	log.Println("AUTH_SERVER: " + viper.GetString("auth_server"))
-
-	serviceConfig := &service.Config{
-		Name:        "golinksd",
-		DisplayName: "golinksd",
-		Description: "golinks daemon",
-	}
-
-	d := &daemon{}
-	s, err := service.New(d, serviceConfig)
+	d, err := NewDaemon()
 	if err != nil {
 		fatalln(err)
 	}
 
-	d.service = s
+	logln("PORT: " + viper.GetString("port"))
+	logln("AUTH_SERVER: " + viper.GetString("auth_server"))
 
-	//TODO refactor to use system logger
-	daemonLogger, err = s.Logger(nil)
-	if err != nil {
+	if err := d.Execute(); err != nil {
 		fatalln(err)
 	}
-
-	if err = s.Run(); err != nil {
-		daemonLogger.Error(err)
-	}
-}
-
-func setupConfig() error {
-	daemonHome := HomeDir()
-
-	os.Mkdir(daemonHome, os.ModePerm)
-
-	viper.SetConfigName("config")
-	viper.SetConfigType("json")
-	viper.SetEnvPrefix("golinksd")
-	viper.SetDefault("peer_port", 7777)
-	viper.SetDefault("auth_server", "https://govice.org")
-	viper.SetDefault("port", 8080)
-	viper.SetDefault("genesis", false)
-	viper.SetDefault("delay_startup", 0)
-	viper.SetDefault("templates_home", "./templates")
-	viper.SetDefault("ledger", "https://govice.org/assets/ledger.json")
-
-	viper.AddConfigPath(daemonHome)
-
-	logln("reading config")
-	err := viper.ReadInConfig()
-	if _, ok := err.(viper.ConfigFileNotFoundError); ok {
-		configFile := filepath.Join(daemonHome, "config.json")
-		if _, err := os.Create(configFile); err != nil {
-			return err
-		}
-		logln("creating new config file")
-		if err := viper.WriteConfig(); err != nil {
-			logln("failed to write new config file")
-			return err
-		}
-	}
-	return nil
-}
-
-var ErrInvalidLedger = errors.New("failed to load ledger from config")
-
-func loadLedger() (*Ledger, error) {
-	ledger := &Ledger{}
-
-	ledgerBytes, err := ioutil.ReadFile(filepath.Join(HomeDir(), "ledger.json"))
-	if err != nil {
-		return nil, err
-	}
-
-	if err := json.Unmarshal(ledgerBytes, ledger); err != nil {
-		return nil, err
-	}
-
-	return ledger, nil
-}
-
-func HomeDir() string {
-	homeDir, _ := os.UserHomeDir()
-	return filepath.Join(homeDir, ".golinksd")
 }

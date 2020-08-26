@@ -1,3 +1,17 @@
+// Copyright 2020 Kevin Gentile
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 package main
 
 import (
@@ -5,7 +19,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/gin-gonic/gin"
 	"github.com/kardianos/service"
 	"github.com/spf13/viper"
 	"golang.org/x/sync/errgroup"
@@ -16,70 +29,126 @@ var (
 )
 
 type daemon struct {
-	cancelFuncs []context.CancelFunc
-	service     service.Service
+	cancelFuncs       []context.CancelFunc
+	service           service.Service
+	logger            service.Logger
+	errorGroup        errgroup.Group
+	blockchainService *BlockchainService
+	configService     *ConfigService
+	golinksService    *GolinksService
+	webserver         *Webserver
+	worker            *Worker
+	chainTracker      *ChainTracker
+
+	chainMutex sync.Mutex
 }
 
-var (
-	g errgroup.Group
-)
+func NewDaemon() (*daemon, error) {
+	// SERVICES
+	d := &daemon{}
+	cs, err := NewConfigService(d)
+	if err != nil {
+		errln("failed to initialize configuration service")
+	}
+	d.configService = cs
+
+	bs, err := NewBlockchainService(d)
+	if err != nil {
+		errln("failed to initialize blockchain service")
+		return nil, err
+	}
+	d.blockchainService = bs
+
+	gs, err := NewGolinksService(d)
+	if err != nil {
+		errln("failed to iniitalize golinks service")
+	}
+	d.golinksService = gs
+
+	// WORKERS
+	webserver, err := NewWebserver(d)
+	if err != nil {
+		errln("failed to initialize webserver")
+		return nil, err
+	}
+	d.webserver = webserver
+
+	worker, err := NewWorker(d)
+	if err != nil {
+		errln("failed to initialize worker")
+		return nil, err
+	}
+	d.worker = worker
+
+	ct, err := NewChainTracker(d)
+	if err != nil {
+		errln("failed to initialize chain tracker")
+	}
+	d.chainTracker = ct
+
+	// DAEMON CONFIG
+	serviceConfig := &service.Config{
+		Name:        "golinksd",
+		DisplayName: "golinksd",
+		Description: "golinks daemon",
+	}
+
+	s, err := service.New(d, serviceConfig)
+	if err != nil {
+		return nil, err
+	}
+	d.service = s
+
+	d.logger, err = s.Logger(nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return d, nil
+}
+
+func (d *daemon) Execute() error {
+	if err := d.service.Run(); err != nil {
+		return err
+	}
+	return nil
+}
 
 func (d *daemon) run() error {
-
-	router := gin.Default()
-	blockchainService = &BlockchainService{
-		mutex: sync.Mutex{},
-	}
-	//TODO load blockchain from file
-	if viper.GetBool("genesis") {
-		blockchainService.resetChain()
-	}
 
 	primaryContext, primaryCancel := context.WithCancel(context.Background())
 
 	d.cancelFuncs = append(d.cancelFuncs, primaryCancel)
 
 	if viper.GetBool("development") {
-		g.Go(func() error {
-			var frontendErr error
-			go func() {
-				if frontendErr = registerFrontendRoutes(router); frontendErr != nil {
-					return
-				}
-
-				if frontendErr = router.Run(":" + viper.GetString("port")); frontendErr != nil {
-					return
-				} // listen and serve on PORT
-			}()
-			<-primaryContext.Done()
-			return frontendErr
+		d.errorGroup.Go(func() error {
+			return d.ExecuteFrontend(primaryContext)
 		})
 	}
 
-	if err := registerAPIRoutes(router); err != nil {
-		return err
-	}
+	workerCtx, cancelDaemon := context.WithCancel(primaryContext)
 
-	daemonCtx, cancelDaemon := context.WithCancel(primaryContext)
-
-	g.Go(func() error {
-		if err := startHost(daemonCtx); err != nil {
-			return err
-		}
-
-		return nil
+	d.errorGroup.Go(func() error {
+		return d.ExecuteWorker(workerCtx)
 	})
 	d.cancelFuncs = append(d.cancelFuncs, cancelDaemon)
+
+	chainTrackerCtx, cancelChainTracker := context.WithCancel(primaryContext)
+	d.errorGroup.Go(func() error {
+		return d.ExecuteChainTracker(chainTrackerCtx)
+	})
+	d.cancelFuncs = append(d.cancelFuncs, cancelChainTracker)
 
 	<-primaryContext.Done()
 	return nil
 }
 
-func pingNodes() {
-	pingNodeTicker = time.Tick(15 * time.Second)
-	for range pingNodeTicker {
-		ledger.PingNodes()
-	}
+func (d *daemon) ExecuteFrontend(ctx context.Context) error {
+	return d.webserver.Execute(ctx)
+}
+
+func (d *daemon) ExecuteWorker(ctx context.Context) error {
+	return d.worker.Execute(ctx)
 }
 
 func (d *daemon) Start(s service.Service) error {
@@ -93,6 +162,14 @@ func (d *daemon) Stop(s service.Service) error {
 		logf("canceling context %d/%d\n", i+1, len(d.cancelFuncs))
 		cancel()
 	}
-	g.Wait()
+	d.errorGroup.Wait()
 	return nil
+}
+
+func (d *daemon) HomeDir() string {
+	return d.configService.HomeDir()
+}
+
+func (d *daemon) ExecuteChainTracker(ctx context.Context) error {
+	return d.chainTracker.Execute(ctx)
 }
