@@ -20,6 +20,7 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
+	"sort"
 	"strconv"
 	"strings"
 	"time"
@@ -120,7 +121,7 @@ func (ct *ChainTracker) synchronize(syncInfo *SyncInfo) error {
 }
 
 func (ct *ChainTracker) localChainFileLength() (int, error) {
-	files, err := ioutil.ReadDir(ct.chainDir())
+	files, err := ct.readChainDir()
 	if err != nil {
 		return -1, err
 	}
@@ -187,8 +188,10 @@ func (ct *ChainTracker) requestBlockRange(startIndex, endIndex int) ([]*block.Bl
 }
 
 func (ct *ChainTracker) LocalHead() (*block.Block, error) {
-	files, err := ioutil.ReadDir(ct.chainDir())
+
+	files, err := ct.readChainDir()
 	if err != nil {
+		errln("failed to read chain directory")
 		return nil, err
 	}
 
@@ -207,8 +210,45 @@ func (ct *ChainTracker) LocalHead() (*block.Block, error) {
 	return b, nil
 }
 
+func (ct *ChainTracker) readChainDir() ([]os.FileInfo, error) {
+	files, err := ioutil.ReadDir(ct.chainDir())
+	if err != nil {
+		return nil, err
+	}
+
+	sort.Sort(NumericalFileInfos(files))
+
+	return files, nil
+}
+
 type SyncInfo struct {
 	NeedsSync    bool
 	LocalLength  int
 	RemoteLength int
+}
+
+type NumericalFileInfos []os.FileInfo
+
+func (nfi NumericalFileInfos) Len() int {
+	return len(nfi)
+}
+
+func (nfi NumericalFileInfos) Swap(i, j int) {
+	nfi[i], nfi[j] = nfi[j], nfi[i]
+}
+
+func (nfi NumericalFileInfos) Less(i, j int) bool {
+	pathA := nfi[i].Name()
+	pathB := nfi[j].Name()
+
+	a, err := strconv.Atoi(pathA[0:strings.LastIndex(pathA, ".")])
+	if err != nil {
+		return pathA < pathB
+	}
+	b, err := strconv.Atoi(pathB[0:strings.LastIndex(pathB, ".")])
+	if err != nil {
+		return pathA < pathB
+	}
+
+	return a < b
 }
