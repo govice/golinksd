@@ -20,6 +20,7 @@ import (
 	"errors"
 	"os"
 	"path/filepath"
+	"sync"
 	"time"
 
 	"github.com/govice/golinks/block"
@@ -78,9 +79,6 @@ func (w *Worker) Execute(ctx context.Context) error {
 }
 
 func (w *Worker) generateAndUploadBlockmap(rootPath string) error {
-	logln("sending force sync to chain tracker")
-	w.daemon.chainTracker.forceSyncChan <- time.Now()
-	w.daemon.chainTracker.syncWaitGroup.Wait()
 	blkmap, err := w.generateBlockmap(rootPath)
 	if err != nil {
 		errln("failed to generate blockmap", err)
@@ -92,6 +90,12 @@ func (w *Worker) generateAndUploadBlockmap(rootPath string) error {
 		errln("failed to marshal blockmap")
 		return err
 	}
+
+	logln("sending force sync to chain tracker")
+	var wg sync.WaitGroup
+	wg.Add(1)
+	w.daemon.chainTracker.forceSyncChan <- &wg
+	wg.Wait()
 
 	localHeadBlock, err := w.daemon.chainTracker.LocalHead()
 	if err != nil {
