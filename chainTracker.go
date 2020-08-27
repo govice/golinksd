@@ -32,14 +32,13 @@ import (
 
 type ChainTracker struct {
 	daemon        *daemon
-	forceSyncChan chan time.Time
-	syncWaitGroup sync.WaitGroup
+	forceSyncChan chan *sync.WaitGroup
 }
 
 func NewChainTracker(daemon *daemon) (*ChainTracker, error) {
 	return &ChainTracker{
 		daemon:        daemon,
-		forceSyncChan: make(chan time.Time),
+		forceSyncChan: make(chan *sync.WaitGroup),
 	}, nil
 }
 
@@ -57,11 +56,12 @@ func (ct *ChainTracker) Execute(ctx context.Context) error {
 			if err := ct.checkAndSync(); err != nil {
 				errln("check and sync failed", err)
 			}
-		case t := <-ct.forceSyncChan:
-			logln("received force sync", t.String())
+		case wg := <-ct.forceSyncChan:
+			logln("received force sync")
 			if err := ct.checkAndSync(); err != nil {
 				errln("force sync failed", err)
 			}
+			wg.Done()
 		case <-ctx.Done():
 			logln("received termination on chain tracker context")
 			return nil
@@ -79,8 +79,6 @@ func (ct *ChainTracker) chainDir() string {
 }
 
 func (ct *ChainTracker) checkAndSync() error {
-	ct.syncWaitGroup.Add(1)
-	defer ct.syncWaitGroup.Done()
 	syncInfo, err := ct.getSyncInfo()
 	if err != nil {
 		errln("failed to get sync info:", err)
