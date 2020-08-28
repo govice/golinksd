@@ -78,6 +78,8 @@ func (cs *ConfigService) setupConfig() error {
 			return err
 		}
 	}
+
+	viper.WatchConfig()
 	return nil
 }
 

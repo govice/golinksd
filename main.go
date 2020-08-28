@@ -27,7 +27,20 @@ func main() {
 	logln("PORT: " + viper.GetString("port"))
 	logln("AUTH_SERVER: " + viper.GetString("auth_server"))
 
-	if err := d.Execute(); err != nil {
+	go func() {
+		if err := d.Execute(); err != nil {
+			fatalln(err)
+		}
+	}()
+
+	gui, err := NewGUI(d)
+	if err != nil {
 		fatalln(err)
+	}
+	gui.Show()
+	gui.app.Run()
+
+	if err := d.StopDaemon(); err != nil {
+		errln("failed to clean-stop daemon", err)
 	}
 }
