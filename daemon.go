@@ -44,6 +44,20 @@ type daemon struct {
 	chainMutex sync.Mutex
 }
 
+func NewDaemonWithGUI() (*daemon, error) {
+	d, err := NewDaemon()
+	if err != nil {
+		return nil, err
+	}
+
+	d.gui, err = NewGUI(d)
+	if err != nil {
+		return nil, err
+	}
+
+	return d, nil
+}
+
 func NewDaemon() (*daemon, error) {
 	// SERVICES
 	d := &daemon{}
@@ -200,6 +214,11 @@ func (d *daemon) Stop(s service.Service) error {
 		cancel()
 	}
 	d.errorGroup.Wait()
+
+	if d.gui != nil {
+		logln("calling quit on GUI")
+		d.gui.app.Quit()
+	}
 	return nil
 }
 
@@ -209,4 +228,9 @@ func (d *daemon) HomeDir() string {
 
 func (d *daemon) ExecuteChainTracker(ctx context.Context) error {
 	return d.chainTracker.Execute(ctx)
+}
+
+// WARN: this must be executed from the main thread
+func (d *daemon) RunGUI() {
+	d.gui.ShowAndRun()
 }

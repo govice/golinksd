@@ -3,7 +3,7 @@ package main
 import (
 	"fyne.io/fyne"
 	"fyne.io/fyne/app"
-	"fyne.io/fyne/widget"
+	"github.com/govice/golinks-daemon/scene"
 )
 
 type GUI struct {
@@ -18,16 +18,7 @@ func NewGUI(daemon *daemon) (*GUI, error) {
 	}, nil
 }
 
-func (g *GUI) Show() {
-	w := g.app.NewWindow("Hello")
-
-	hello := widget.NewLabel("Hello Fyne!")
-	w.SetContent(widget.NewVBox(
-		hello,
-		widget.NewButton("Hi!", func() {
-			hello.SetText("Welcome :)")
-		}),
-	))
-
-	w.Show()
+func (g *GUI) ShowAndRun() {
+	scene.Primary(g.app)
+	g.app.Run()
 }

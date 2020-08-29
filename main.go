@@ -19,7 +19,7 @@ import (
 )
 
 func main() {
-	d, err := NewDaemon()
+	d, err := NewDaemonWithGUI()
 	if err != nil {
 		fatalln(err)
 	}
@@ -33,14 +33,5 @@ func main() {
 		}
 	}()
 
-	gui, err := NewGUI(d)
-	if err != nil {
-		fatalln(err)
-	}
-	gui.Show()
-	gui.app.Run()
-
-	if err := d.StopDaemon(); err != nil {
-		errln("failed to clean-stop daemon", err)
-	}
+	d.RunGUI()
 }
