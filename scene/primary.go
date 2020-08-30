@@ -39,6 +39,7 @@ func Primary(app fyne.App) {
 
 	tabs := widget.NewTabContainer(
 		widget.NewTabItemWithIcon("Home", theme.HomeIcon(), homeScreen(app)),
+		widget.NewTabItemWithIcon("Workers", theme.ComputerIcon(), workersScreen(app)),
 	)
 
 	tabs.SetTabLocation(widget.TabLocationLeading)
@@ -51,9 +52,16 @@ func Primary(app fyne.App) {
 
 func homeScreen(app fyne.App) fyne.CanvasObject {
 	vbox := widget.NewVBox(
-		layout.NewSpacer(),
 		widget.NewLabelWithStyle("Home screen", fyne.TextAlignCenter, fyne.TextStyle{Bold: true}),
 		widget.NewHBox(layout.NewSpacer()),
 	)
+	return vbox
+}
+
+func workersScreen(app fyne.App) fyne.CanvasObject {
+	vbox := widget.NewVBox(
+		widget.NewLabelWithStyle("Workers", fyne.TextAlignCenter, fyne.TextStyle{Bold: true}),
+	)
+
 	return vbox
 }
