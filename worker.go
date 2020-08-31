@@ -1,17 +1,3 @@
-// Copyright 2020 Kevin Gentile
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//      http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
-
 package main
 
 import (
@@ -26,35 +12,31 @@ import (
 	"github.com/govice/golinks/block"
 	"github.com/govice/golinks/blockchain"
 	"github.com/govice/golinks/blockmap"
-	"github.com/spf13/viper"
 )
 
 type Worker struct {
-	daemon *daemon
-}
-
-func NewWorker(daemon *daemon) (*Worker, error) {
-	return &Worker{daemon: daemon}, nil
+	daemon           *daemon
+	cancelFunc       context.CancelFunc
+	RootPath         string `json:"root_path"`
+	GenerationPeriod int    `json:"generation_period"`
 }
 
 var ErrBadRootPath = errors.New("bad root_path")
 
 func (w *Worker) Execute(ctx context.Context) error {
-	logln("starting worker")
 	// TODO pull this from its own config file(s)
-	rootPath := viper.GetString("root_path")
-	fi, err := os.Stat(rootPath)
+	fi, err := os.Stat(w.RootPath)
 	if err != nil || !fi.IsDir() {
 		logln(err)
 		return ErrBadRootPath
 	}
-	absRootPath, err := filepath.Abs(rootPath)
+	absRootPath, err := filepath.Abs(w.RootPath)
 	if err != nil {
 		return err
 	}
-	period := viper.GetInt("generation_period")
-	logln("generation_period:", period, "ms")
-	generationTicker := time.NewTicker(time.Duration(period) * time.Millisecond)
+
+	logln("generation_period:", w.GenerationPeriod, "ms")
+	generationTicker := time.NewTicker(time.Duration(w.GenerationPeriod) * time.Millisecond)
 	logln("generating startup blockmap")
 
 	if err := w.generateAndUploadBlockmap(absRootPath); err != nil {

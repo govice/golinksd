@@ -37,7 +37,7 @@ type daemon struct {
 	configService     *ConfigService
 	golinksService    *GolinksService
 	webserver         *Webserver
-	worker            *Worker
+	workerManager     *WorkerManager
 	chainTracker      *ChainTracker
 	gui               *GUI
 
@@ -126,12 +126,12 @@ func (d *daemon) initializeBackgroundTasks() error {
 	}
 	d.webserver = webserver
 
-	worker, err := NewWorker(d)
+	workerManager, err := NewWorkerManager(d)
 	if err != nil {
 		errln("failed to initialize worker")
 		return err
 	}
-	d.worker = worker
+	d.workerManager = workerManager
 
 	ct, err := NewChainTracker(d)
 	if err != nil {
@@ -176,7 +176,7 @@ func (d *daemon) run() error {
 	workerCtx, cancelDaemon := context.WithCancel(primaryContext)
 
 	d.errorGroup.Go(func() error {
-		return d.ExecuteWorker(workerCtx)
+		return d.ExecuteWorkerManager(workerCtx)
 	})
 	d.cancelFuncs = append(d.cancelFuncs, cancelDaemon)
 
@@ -194,8 +194,8 @@ func (d *daemon) ExecuteFrontend(ctx context.Context) error {
 	return d.webserver.Execute(ctx)
 }
 
-func (d *daemon) ExecuteWorker(ctx context.Context) error {
-	return d.worker.Execute(ctx)
+func (d *daemon) ExecuteWorkerManager(ctx context.Context) error {
+	return d.workerManager.Execute(ctx)
 }
 
 func (d *daemon) Start(s service.Service) error {
@@ -218,6 +218,8 @@ func (d *daemon) Stop(s service.Service) error {
 	if d.gui != nil {
 		logln("calling quit on GUI")
 		d.gui.app.Quit()
+		d.gui.daemon = nil
+		d.gui = nil
 	}
 	return nil
 }

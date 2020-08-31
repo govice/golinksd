@@ -34,4 +34,8 @@ func main() {
 	}()
 
 	d.RunGUI()
+
+	if err := d.StopDaemon(); err != nil {
+		fatalln(err)
+	}
 }
