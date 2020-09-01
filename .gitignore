@@ -14,3 +14,5 @@ golinks-daemon
 *.out
 
 *.env
+
+/build

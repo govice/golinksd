@@ -16,7 +16,6 @@ package main
 
 import (
 	"context"
-	"log"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
@@ -47,13 +46,13 @@ func NewWebserver(daemon *daemon) (*Webserver, error) {
 }
 
 func (w *Webserver) registerFrontendRoutes() error {
-	templatesHome := viper.GetString("templates_home")
-	log.Println("Templates Home: " + templatesHome)
-	if templatesHome != "" {
-		w.router.LoadHTMLGlob(templatesHome + "/*")
-	} else {
-		w.router.LoadHTMLGlob("./templates/*")
-	}
+	// templatesHome := viper.GetString("templates_home")
+	// log.Println("Templates Home: " + templatesHome)
+	// if templatesHome != "" {
+	// 	w.router.LoadHTMLGlob(templatesHome + "/*")
+	// } else {
+	// 	w.router.LoadHTMLGlob("./templates/*")
+	// }
 	w.router.GET("/error", func(c *gin.Context) {
 		c.HTML(http.StatusOK, "error.html", gin.H{
 			"title": "GoLinks | Error",
