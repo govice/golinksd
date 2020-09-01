@@ -34,12 +34,19 @@ type WorkerConfig struct {
 }
 
 func NewWorkerManager(daemon *daemon) (*WorkerManager, error) {
-	return &WorkerManager{daemon: daemon}, nil
+	m := &WorkerManager{daemon: daemon}
+	workerConfig, err := m.loadWorkerConfig()
+	if err != nil {
+		errln("failed to load worker config", err)
+		return nil, err
+	}
+	m.WorkerConfig = workerConfig
+	return m, nil
 }
 
-func (w *WorkerManager) LoadWorkerConfig(daemon *daemon) (*WorkerConfig, error) {
+func (w *WorkerManager) loadWorkerConfig() (*WorkerConfig, error) {
 	logln("loading worker config...")
-	workerConfigPath := filepath.Join(daemon.configService.HomeDir(), "workers.json")
+	workerConfigPath := filepath.Join(w.daemon.configService.HomeDir(), "workers.json")
 	configBytes, err := ioutil.ReadFile(workerConfigPath)
 	if err != nil {
 		return nil, err
@@ -51,20 +58,13 @@ func (w *WorkerManager) LoadWorkerConfig(daemon *daemon) (*WorkerConfig, error) 
 	}
 
 	for _, worker := range workerConfig.Workers {
-		worker.daemon = daemon
+		worker.daemon = w.daemon
 	}
 
 	return workerConfig, nil
 }
 
 func (w *WorkerManager) Execute(ctx context.Context) error {
-	workerConfig, err := w.LoadWorkerConfig(w.daemon)
-	if err != nil {
-		errln("failed to load worker config", err)
-		return err
-	}
-	w.WorkerConfig = workerConfig
-
 	logln("starting workers...")
 	for _, worker := range w.WorkerConfig.Workers {
 		workerCtx, workerCancelFunc := context.WithCancel(ctx)
