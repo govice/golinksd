@@ -81,18 +81,22 @@ func (g *GUI) homeScene() fyne.CanvasObject {
 }
 
 func (g *GUI) workersScene() fyne.CanvasObject {
-	var workerAccordionItems []*widget.AccordionItem
+	var workerItems []fyne.CanvasObject
 	for _, worker := range g.daemon.workerManager.WorkerConfig.Workers {
-		workerAccordionItems = append(workerAccordionItems, widget.NewAccordionItem(worker.RootPath, g.makeWorkerForm(worker)))
-
+		// workerAccordionItems = append(workerAccordionItems, widget.NewAccordionItem(worker.RootPath, g.makeWorkerListEntry(worker)))
+		workerItems = append(workerItems, widget.NewButton(worker.RootPath, nil))
 	}
+
 	return widget.NewVBox(
 		widget.NewLabelWithStyle("Workers", fyne.TextAlignCenter, fyne.TextStyle{Bold: true}),
-		widget.NewAccordionContainer(workerAccordionItems...),
+		widget.NewVSplitContainer(
+			widget.NewScrollContainer(widget.NewVBox(workerItems...)),
+			widget.NewButtonWithIcon("Add Worker", theme.ContentAddIcon(), addWorkerAction),
+		),
 	)
 }
 
-func (g *GUI) makeWorkerForm(worker *Worker) fyne.CanvasObject {
+func (g *GUI) makeWorkerListEntry(worker *Worker) fyne.CanvasObject {
 	browserButton := widget.NewButton("Open", func() {
 		dialog.ShowFileOpen(func(closer fyne.URIReadCloser, err error) {
 			if err != nil {
@@ -113,4 +117,8 @@ func (g *GUI) makeWorkerForm(worker *Worker) fyne.CanvasObject {
 	}
 
 	return form
+}
+
+func addWorkerAction() {
+
 }
