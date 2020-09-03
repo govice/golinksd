@@ -33,6 +33,7 @@ type Worker struct {
 	cancelFunc       context.CancelFunc
 	RootPath         string `json:"root_path"`
 	GenerationPeriod int    `json:"generation_period"`
+	running          bool
 }
 
 var ErrBadRootPath = errors.New("bad root_path")

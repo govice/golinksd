@@ -17,6 +17,7 @@ package main
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"io/ioutil"
 	"path/filepath"
 
@@ -27,6 +28,7 @@ type WorkerManager struct {
 	daemon       *daemon
 	errorGroup   errgroup.Group
 	WorkerConfig *WorkerConfig
+	ctx          context.Context
 }
 
 type WorkerConfig struct {
@@ -65,11 +67,10 @@ func (w *WorkerManager) loadWorkerConfig() (*WorkerConfig, error) {
 }
 
 func (w *WorkerManager) Execute(ctx context.Context) error {
+	w.ctx = ctx
 	logln("starting workers...")
-	for _, worker := range w.WorkerConfig.Workers {
-		workerCtx, workerCancelFunc := context.WithCancel(ctx)
-		worker.cancelFunc = workerCancelFunc
-		w.errorGroup.Go(func() error { return worker.Execute(workerCtx) })
+	if err := w.startWorkers(ctx); err != nil {
+		return err
 	}
 
 	for {
@@ -80,4 +81,31 @@ func (w *WorkerManager) Execute(ctx context.Context) error {
 			return nil
 		}
 	}
+}
+
+func (w *WorkerManager) startWorkers(ctx context.Context) error {
+	for _, worker := range w.WorkerConfig.Workers {
+		if worker.running {
+			continue
+		}
+		workerCtx, workerCancelFunc := context.WithCancel(ctx)
+		worker.cancelFunc = func() {
+			workerCancelFunc()
+			worker.running = false
+		}
+		w.errorGroup.Go(func() error { return worker.Execute(workerCtx) })
+		worker.running = true
+	}
+
+	return nil
+}
+
+var ErrWorkerManagerNotStarted = errors.New("worker cannot be restarted without an existing context")
+
+func (w *WorkerManager) startNewWorkers() error {
+	if w.ctx == nil {
+		return ErrWorkerManagerNotStarted
+	}
+
+	return w.startWorkers(w.ctx)
 }

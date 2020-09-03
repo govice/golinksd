@@ -16,9 +16,11 @@ package main
 
 import (
 	"fmt"
+	"image/color"
 
 	"fyne.io/fyne"
 	"fyne.io/fyne/app"
+	"fyne.io/fyne/canvas"
 	"fyne.io/fyne/dialog"
 	"fyne.io/fyne/layout"
 	"fyne.io/fyne/theme"
@@ -83,16 +85,16 @@ func (g *GUI) homeScene() fyne.CanvasObject {
 func (g *GUI) workersScene() fyne.CanvasObject {
 	var workerItems []fyne.CanvasObject
 	for _, worker := range g.daemon.workerManager.WorkerConfig.Workers {
-		// workerAccordionItems = append(workerAccordionItems, widget.NewAccordionItem(worker.RootPath, g.makeWorkerListEntry(worker)))
 		workerItems = append(workerItems, widget.NewButton(worker.RootPath, nil))
 	}
 
+	circleSpacer := canvas.NewCircle(color.White)
+	circleSpacer.StrokeWidth = 3
 	return widget.NewVBox(
 		widget.NewLabelWithStyle("Workers", fyne.TextAlignCenter, fyne.TextStyle{Bold: true}),
-		widget.NewVSplitContainer(
-			widget.NewScrollContainer(widget.NewVBox(workerItems...)),
-			widget.NewButtonWithIcon("Add Worker", theme.ContentAddIcon(), addWorkerAction),
-		),
+		widget.NewScrollContainer(widget.NewVBox(workerItems...)),
+		circleSpacer,
+		widget.NewButtonWithIcon("Add Worker", theme.ContentAddIcon(), g.addWorkerAction),
 	)
 }
 
@@ -119,6 +121,26 @@ func (g *GUI) makeWorkerListEntry(worker *Worker) fyne.CanvasObject {
 	return form
 }
 
-func addWorkerAction() {
-
+func (g *GUI) addWorkerAction() {
+	//TODO directory selection not yet supported https://github.com/fyne-io/fyne/issues/941
+	//TODO hidden directories not visible https://github.com/fyne-io/fyne/issues/1278
+	fi := dialog.NewFileOpen(func(uri fyne.URIReadCloser, err error) {
+		if err != nil {
+			errln("failed to get worker diretory", err)
+			return
+		}
+		if uri == nil {
+			logln("add worker canceled")
+		}
+		logln("uri", uri.URI().String())
+		logln("name", uri.Name())
+		worker := &Worker{
+			daemon:           g.daemon,
+			RootPath:         uri.URI().String(),
+			GenerationPeriod: 30000,
+		}
+		g.daemon.workerManager.WorkerConfig.Workers = append(g.daemon.workerManager.WorkerConfig.Workers, worker)
+		g.daemon.workerManager.startNewWorkers()
+	}, *g.mainWindow)
+	fi.Show()
 }
