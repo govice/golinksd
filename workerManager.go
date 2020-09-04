@@ -35,6 +35,10 @@ type WorkerConfig struct {
 	Workers []*Worker `json:"workers"`
 }
 
+func (wc *WorkerConfig) Length() int {
+	return len(wc.Workers)
+}
+
 func NewWorkerManager(daemon *daemon) (*WorkerManager, error) {
 	m := &WorkerManager{daemon: daemon}
 	workerConfig, err := m.loadWorkerConfig()

@@ -27,13 +27,13 @@ func main() {
 	logln("PORT: " + viper.GetString("port"))
 	logln("AUTH_SERVER: " + viper.GetString("auth_server"))
 
-	go func() {
-		if err := d.Execute(); err != nil {
-			fatalln(err)
-		}
-	}()
+	// go func() {
+	if err := d.Execute(); err != nil {
+		fatalln(err)
+	}
+	// }()
 
-	d.RunGUI()
+	// d.RunGUI()
 
 	if err := d.StopDaemon(); err != nil {
 		fatalln(err)

@@ -17,6 +17,7 @@ package main
 import (
 	"log"
 	"net/http"
+	"strconv"
 
 	"github.com/gin-gonic/gin"
 )
@@ -34,6 +35,35 @@ func (w *Webserver) registerConsoleHandlers() error {
 	})
 
 	router.GET("/console", func(c *gin.Context) {
+		workersCard := &ConsoleCard{Title: "Workers"}
+		for index, worker := range w.daemon.workerManager.WorkerConfig.Workers {
+			option := &CardOption{
+				Label: worker.RootPath,
+				URL:   "/console/worker/" + strconv.Itoa(index),
+			}
+			workersCard.Options = append(workersCard.Options, option)
+		}
+		consoleCards := []*ConsoleCard{
+			{
+				Title: "Block Chainer",
+				Options: []*CardOption{
+					{
+						Label: "Add Block",
+						URL:   "/console/addBlock",
+					},
+					{
+						Label: "Get Chain",
+						URL:   "/console/getChain",
+					},
+					{
+						Label: "Delete Chain",
+						URL:   "/console/deleteChain",
+					},
+				},
+			},
+			workersCard,
+		}
+
 		c.HTML(http.StatusOK, "index.html", gin.H{
 			"title": "GoLinks | Home",
 			"cards": consoleCards,
@@ -74,25 +104,31 @@ func (w *Webserver) registerConsoleHandlers() error {
 		c.Redirect(http.StatusSeeOther, "/console")
 	})
 
-	return nil
-}
+	router.GET("console/worker/:id", func(c *gin.Context) {
+		idStr, ok := c.Params.Get("id")
+		if !ok {
+			logln("invalid worker id:", idStr)
+			c.AbortWithStatus(http.StatusBadRequest)
+			return
+		}
 
-var consoleCards = []ConsoleCard{
-	ConsoleCard{
-		Title: "Block Chainer",
-		Options: []CardOption{
-			CardOption{
-				Label: "Add Block",
-				URL:   "/console/addBlock",
-			},
-			CardOption{
-				Label: "Get Chain",
-				URL:   "/console/getChain",
-			},
-			CardOption{
-				Label: "Delete Chain",
-				URL:   "/console/deleteChain",
-			},
-		},
-	},
+		id, err := strconv.Atoi(idStr)
+		if err != nil {
+			c.AbortWithStatus(http.StatusBadRequest)
+			return
+		}
+
+		if id < 0 || id > w.daemon.workerManager.WorkerConfig.Length()-1 {
+			c.AbortWithStatus(http.StatusBadRequest)
+			return
+		}
+
+		c.HTML(http.StatusOK, "worker.tmpl.html", gin.H{
+			"Root":  w.daemon.workerManager.WorkerConfig.Workers[id].RootPath,
+			"Index": id,
+		})
+
+	})
+
+	return nil
 }

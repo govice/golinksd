@@ -22,6 +22,6 @@ type CardOption struct {
 
 //ConsoleCard is in templating to display a card on the console
 type ConsoleCard struct {
-	Title   string       `json:"title"`
-	Options []CardOption `json:"options"`
+	Title   string        `json:"title"`
+	Options []*CardOption `json:"options"`
 }
