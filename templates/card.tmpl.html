@@ -1,14 +1,18 @@
 <div class="card bg-dark mb-2">
 	<div class="card-body">
 		<h5 class="card-title text-light">{{ .Title }}</h5>
-		{{ range .Options }}
 		<div class="list-group">
+			{{ range .Options }}
 			<div class="row mx-1 mb-1 w-auto">
 				<a href="{{ .URL }}" class="list-group-item list-group-item-action">
 					{{ .Label }}
 				</a>
 			</div>
+			{{ end }}
 		</div>
+		{{ range .Buttons }}
+		<a href="{{ .URL }}" class="{{ .Class }}">{{ .Label }}</a>
 		{{ end }}
+		
 	</div>
 </div>

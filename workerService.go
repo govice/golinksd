@@ -30,3 +30,10 @@ func (ws *WorkerService) deleteWorkerByIndex(index int) error {
 	}
 	return ws.daemon.workerManager.removeWorker(index)
 }
+
+func (ws *WorkerService) addWorker(rootPath string, generationPeriod int) error {
+	if _, err := ws.daemon.workerManager.addWorker(rootPath, generationPeriod); err != nil {
+		return err
+	}
+	return ws.daemon.workerManager.startNewWorkers()
+}

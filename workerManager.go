@@ -146,3 +146,21 @@ func (w *WorkerManager) getWorker(index int) *Worker {
 	defer w.mu.Unlock()
 	return w.WorkerConfig.Workers[index]
 }
+
+func (w *WorkerManager) addWorker(rootPath string, generationPeriod int) (*Worker, error) {
+	w.mu.Lock()
+	defer w.mu.Unlock()
+	worker := &Worker{
+		daemon:           w.daemon,
+		RootPath:         rootPath,
+		GenerationPeriod: generationPeriod,
+	}
+
+	w.WorkerConfig.Workers = append(w.WorkerConfig.Workers, worker)
+
+	if err := w.saveWorkerConfig(); err != nil {
+		errln("failed to save worker config after adding worker")
+		return nil, err
+	}
+	return worker, nil
+}

@@ -50,6 +50,7 @@ func (w *Worker) Execute(ctx context.Context) error {
 		return err
 	}
 
+	logln("starting worker:", w.RootPath)
 	logln("generation_period:", w.GenerationPeriod, "ms")
 	generationTicker := time.NewTicker(time.Duration(w.GenerationPeriod) * time.Millisecond)
 	logln("generating startup blockmap")

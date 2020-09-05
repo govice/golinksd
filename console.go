@@ -35,11 +35,21 @@ func (w *Webserver) registerConsoleHandlers() error {
 	})
 
 	router.GET("/console", func(c *gin.Context) {
-		workersCard := &ConsoleCard{Title: "Workers"}
+		workersCard := &ConsoleCard{
+			Title: "Workers",
+			Buttons: []*CardButton{
+				{
+					Label: "Add Worker",
+					Class: "btn btn-block btn-success",
+					URL:   "/console/worker/add",
+				},
+			},
+		}
+
 		for index, worker := range w.daemon.workerManager.WorkerConfig.Workers {
 			option := &CardOption{
 				Label: worker.RootPath,
-				URL:   "/console/worker/" + strconv.Itoa(index),
+				URL:   "/console/worker/view/" + strconv.Itoa(index),
 			}
 			workersCard.Options = append(workersCard.Options, option)
 		}
@@ -104,7 +114,7 @@ func (w *Webserver) registerConsoleHandlers() error {
 		c.Redirect(http.StatusSeeOther, "/console")
 	})
 
-	router.GET("console/worker/:id", func(c *gin.Context) {
+	router.GET("console/worker/view/:id", func(c *gin.Context) {
 		idStr, ok := c.Params.Get("id")
 		if !ok {
 			logln("invalid worker id:", idStr)
@@ -155,5 +165,37 @@ func (w *Webserver) registerConsoleHandlers() error {
 		c.Redirect(http.StatusSeeOther, "/console")
 	})
 
+	router.GET("console/worker/add", func(c *gin.Context) {
+		c.HTML(http.StatusOK, "workerAdd.tmpl.html", nil)
+	})
+
+	router.POST("console/worker/add", func(c *gin.Context) {
+		rootPath, ok := c.GetPostForm("workerRoot")
+		if !ok {
+			c.AbortWithStatus(http.StatusBadRequest)
+			return
+		}
+
+		generationPeriodStr, ok := c.GetPostForm("generationPeriod")
+		if !ok {
+			c.AbortWithStatus(http.StatusBadRequest)
+			return
+		}
+
+		generationPeriod, err := strconv.Atoi(generationPeriodStr)
+		if err != nil {
+			c.AbortWithStatus(http.StatusBadRequest)
+			return
+		}
+
+		if err := w.workerService.addWorker(rootPath, generationPeriod); err != nil {
+			c.AbortWithError(http.StatusInternalServerError, err)
+			return
+		}
+
+		c.Redirect(http.StatusSeeOther, "/console")
+	})
+
 	return nil
+
 }
