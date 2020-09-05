@@ -24,8 +24,10 @@ import (
 )
 
 type Webserver struct {
-	router *gin.Engine
-	daemon *daemon
+	router            *gin.Engine
+	daemon            *daemon
+	blockchainService *BlockchainService
+	workerService     *WorkerService
 }
 
 func NewWebserver(daemon *daemon) (*Webserver, error) {
@@ -34,8 +36,27 @@ func NewWebserver(daemon *daemon) (*Webserver, error) {
 		daemon: daemon,
 	}
 
+	bs, err := NewBlockchainService(daemon)
+	if err != nil {
+		errln("failed to initialize blockchain service")
+		return nil, err
+	}
+	w.blockchainService = bs
+
+	ws, err := NewWorkerService(daemon)
+	if err != nil {
+		errln("failed to initializie worker service")
+		return nil, err
+	}
+	w.workerService = ws
+
+	//TODO remove with load ledger
+	if viper.GetBool("genesis") {
+		bs.resetChain()
+	}
+
 	templateResourceHome := daemon.HomeDir() + "/templates"
-	_, err := os.Stat(templateResourceHome)
+	_, err = os.Stat(templateResourceHome)
 	// TODO in dev mode this should force to cwd
 	if os.IsNotExist(err) {
 		logln("defaulting to templates in cwd")

@@ -101,13 +101,6 @@ func (d *daemon) initializeServies() error {
 	}
 	d.configService = cs
 
-	bs, err := NewBlockchainService(d)
-	if err != nil {
-		errln("failed to initialize blockchain service")
-		return err
-	}
-	d.blockchainService = bs
-
 	gs, err := NewGolinksService(d)
 	if err != nil {
 		errln("failed to iniitalize golinks service")

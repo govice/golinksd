@@ -80,7 +80,7 @@ func (w *Webserver) registerConsoleHandlers() error {
 		formContent := c.PostForm("blockContentTextArea")
 		log.Println(formContent)
 		if len(formContent) > 0 {
-			if _, err := blockchainService.addBlock([]byte(formContent)); err != nil {
+			if _, err := w.blockchainService.addBlock([]byte(formContent)); err != nil {
 				c.Redirect(http.StatusSeeOther, "/error")
 				return
 			}
@@ -89,7 +89,7 @@ func (w *Webserver) registerConsoleHandlers() error {
 	})
 
 	router.GET("/console/getChain", func(c *gin.Context) {
-		c.JSON(http.StatusOK, blockchainService.chain)
+		c.JSON(http.StatusOK, w.blockchainService.chain)
 	})
 
 	router.GET("console/deleteChain", func(c *gin.Context) {
@@ -100,7 +100,7 @@ func (w *Webserver) registerConsoleHandlers() error {
 	})
 
 	router.POST("console/deleteChain", func(c *gin.Context) {
-		blockchainService.resetChain()
+		w.blockchainService.resetChain()
 		c.Redirect(http.StatusSeeOther, "/console")
 	})
 
@@ -118,16 +118,41 @@ func (w *Webserver) registerConsoleHandlers() error {
 			return
 		}
 
-		if id < 0 || id > w.daemon.workerManager.WorkerConfig.Length()-1 {
+		worker, err := w.workerService.getWorkerByIndex(id)
+		if err != nil {
 			c.AbortWithStatus(http.StatusBadRequest)
 			return
 		}
 
 		c.HTML(http.StatusOK, "worker.tmpl.html", gin.H{
-			"Root":  w.daemon.workerManager.WorkerConfig.Workers[id].RootPath,
-			"Index": id,
+			"Root":          worker.RootPath,
+			"Index":         id,
+			"RefreshPeriod": worker.GenerationPeriod,
 		})
 
+	})
+
+	router.POST("console/worker/delete/:id", func(c *gin.Context) {
+		idStr, ok := c.Params.Get("id")
+		if !ok {
+			logln("invalid worker id:", idStr)
+			c.AbortWithStatus(http.StatusBadRequest)
+			return
+		}
+
+		id, err := strconv.Atoi(idStr)
+		if err != nil {
+			c.AbortWithStatus(http.StatusBadRequest)
+			return
+		}
+
+		if err := w.workerService.deleteWorkerByIndex(id); err != nil {
+			logln(err)
+			c.AbortWithStatus(http.StatusBadRequest)
+			return
+		}
+
+		c.Redirect(http.StatusSeeOther, "/console")
 	})
 
 	return nil

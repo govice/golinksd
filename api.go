@@ -60,7 +60,7 @@ func (w *Webserver) postBlockEndpoint(c *gin.Context) {
 		return
 	}
 
-	block, err := blockchainService.addBlock([]byte(data.Data))
+	block, err := w.blockchainService.addBlock([]byte(data.Data))
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"status": "error adding block to chain",
@@ -86,19 +86,19 @@ func (w *Webserver) findBlockEndpoint(c *gin.Context) {
 	switch finder.Format {
 	case "index":
 		index, _ := strconv.Atoi(finder.Key)
-		block, _ = blockchainService.FindBlockByIndex(index)
+		block, _ = w.blockchainService.FindBlockByIndex(index)
 		break
 	case "hash":
 		hash, _ := base64.StdEncoding.DecodeString(finder.Key)
-		block, _ = blockchainService.FindBlockByHash(hash)
+		block, _ = w.blockchainService.FindBlockByHash(hash)
 		break
 	case "parent_hash":
 		parentHash, _ := base64.StdEncoding.DecodeString(finder.Key)
-		block, _ = blockchainService.FindBlockByParentHash(parentHash)
+		block, _ = w.blockchainService.FindBlockByParentHash(parentHash)
 		break
 	case "timestamp":
 		timestamp, _ := strconv.ParseInt(finder.Key, 10, 64)
-		block, _ = blockchainService.FindBlockByTimestamp(timestamp)
+		block, _ = w.blockchainService.FindBlockByTimestamp(timestamp)
 		break
 	}
 
@@ -112,7 +112,7 @@ func (w *Webserver) findBlockEndpoint(c *gin.Context) {
 }
 
 func (w *Webserver) getChainEndpoint(c *gin.Context) {
-	c.PureJSON(http.StatusOK, blockchainService.Chain())
+	c.PureJSON(http.StatusOK, w.blockchainService.Chain())
 }
 
 type blockchainSearch struct {

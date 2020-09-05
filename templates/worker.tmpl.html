@@ -26,15 +26,22 @@
                     <table class="table table-light">
                         <tbody>
                             <tr>
-                            <th scope="row">Root Directory</th>
-                            <td>{{ .Root }}</td>
+                                <th scope="row">Root Directory</th>
+                                <td>{{ .Root }}</td>
+                            </tr>
+                            <tr>
+                                <th scope="row">Refresh Period</th>
+                                <td>{{ .RefreshPeriod }} ms</td>
                             </tr>
                         </tbody>
                         </table>
                 </div>
                 <div class="row mx-1 mb-1 w-auto">
                     <div class="col">
-                        <a href="/console/worker/delete/{{ .Index }}" class="btn btn-block btn-danger">Delete</a>
+                        <form action="/console/worker/delete/{{ .Index }}" method="POST">
+                            <button type="submit" class="btn btn-block btn-danger mb-2">Delete</button>
+                        </form>
+                        <a href="/console" class="btn btn-block btn-primary">Home</a>
                     </div>
                 </div>
             </div>
