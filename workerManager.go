@@ -20,6 +20,7 @@ import (
 	"errors"
 	"io/ioutil"
 	"path/filepath"
+	"sync"
 
 	"golang.org/x/sync/errgroup"
 )
@@ -29,6 +30,7 @@ type WorkerManager struct {
 	errorGroup   errgroup.Group
 	WorkerConfig *WorkerConfig
 	ctx          context.Context
+	mu           *sync.Mutex
 }
 
 type WorkerConfig struct {
@@ -40,7 +42,10 @@ func (wc *WorkerConfig) Length() int {
 }
 
 func NewWorkerManager(daemon *daemon) (*WorkerManager, error) {
-	m := &WorkerManager{daemon: daemon}
+	m := &WorkerManager{daemon: daemon,
+		mu: &sync.Mutex{},
+	}
+
 	workerConfig, err := m.loadWorkerConfig()
 	if err != nil {
 		errln("failed to load worker config", err)
@@ -51,6 +56,8 @@ func NewWorkerManager(daemon *daemon) (*WorkerManager, error) {
 }
 
 func (w *WorkerManager) loadWorkerConfig() (*WorkerConfig, error) {
+	w.mu.Lock()
+	defer w.mu.Unlock()
 	logln("loading worker config...")
 	workerConfigPath := filepath.Join(w.daemon.configService.HomeDir(), "workers.json")
 	configBytes, err := ioutil.ReadFile(workerConfigPath)
@@ -68,6 +75,17 @@ func (w *WorkerManager) loadWorkerConfig() (*WorkerConfig, error) {
 	}
 
 	return workerConfig, nil
+}
+
+func (w *WorkerManager) saveWorkerConfig() error {
+	logln("saving worker config...")
+	workerConfigPath := filepath.Join(w.daemon.configService.HomeDir(), "workers.json")
+	configBytes, err := json.MarshalIndent(w.WorkerConfig, "", "  ")
+	if err != nil {
+		return err
+	}
+
+	return ioutil.WriteFile(workerConfigPath, configBytes, 0666)
 }
 
 func (w *WorkerManager) Execute(ctx context.Context) error {
@@ -88,6 +106,8 @@ func (w *WorkerManager) Execute(ctx context.Context) error {
 }
 
 func (w *WorkerManager) startWorkers(ctx context.Context) error {
+	w.mu.Lock()
+	defer w.mu.Unlock()
 	for _, worker := range w.WorkerConfig.Workers {
 		if worker.running {
 			continue
@@ -100,7 +120,6 @@ func (w *WorkerManager) startWorkers(ctx context.Context) error {
 		w.errorGroup.Go(func() error { return worker.Execute(workerCtx) })
 		worker.running = true
 	}
-
 	return nil
 }
 
@@ -110,6 +129,20 @@ func (w *WorkerManager) startNewWorkers() error {
 	if w.ctx == nil {
 		return ErrWorkerManagerNotStarted
 	}
-
 	return w.startWorkers(w.ctx)
+}
+
+func (w *WorkerManager) removeWorker(index int) error {
+	w.mu.Lock()
+	defer w.mu.Unlock()
+	worker := w.WorkerConfig.Workers[index]
+	worker.cancelFunc()
+	w.WorkerConfig.Workers = append(w.WorkerConfig.Workers[:index], w.WorkerConfig.Workers[index+1:]...)
+	return w.saveWorkerConfig()
+}
+
+func (w *WorkerManager) getWorker(index int) *Worker {
+	w.mu.Lock()
+	defer w.mu.Unlock()
+	return w.WorkerConfig.Workers[index]
 }

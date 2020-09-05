@@ -28,5 +28,5 @@ func (ws *WorkerService) deleteWorkerByIndex(index int) error {
 	if index < 0 || index > ws.daemon.workerManager.WorkerConfig.Length()-1 {
 		return ErrWorkerIndexOutOfBonds
 	}
-	return nil
+	return ws.daemon.workerManager.removeWorker(index)
 }
