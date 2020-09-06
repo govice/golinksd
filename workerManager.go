@@ -99,7 +99,9 @@ func (w *WorkerManager) Execute(ctx context.Context) error {
 		select {
 		case <-ctx.Done():
 			logln("worker manager terminating...")
-			//TODO call canecl funcs?
+			for _, worker := range w.WorkerConfig.Workers {
+				worker.cancelFunc()
+			}
 			return nil
 		}
 	}

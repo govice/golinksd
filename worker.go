@@ -70,7 +70,10 @@ func (w *Worker) Execute(ctx context.Context) error {
 		case <-generationTicker.C:
 			logln("generating scheduled blockmap for tick")
 			if err := w.generateAndUploadBlockmap(absRootPath); err != nil {
-				errln("scheduled blockmap generation failed")
+				errln("scheduled blockmap generation failed. Retrying...")
+				if err := w.generateAndUploadBlockmap(absRootPath); err != nil {
+					errln("blockmap generation and upload failed")
+				}
 			}
 		}
 	}
