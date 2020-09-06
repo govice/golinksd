@@ -66,6 +66,7 @@ func (cs *ConfigService) setupConfig() error {
 	viper.AddConfigPath(daemonHome)
 
 	logln("reading config")
+
 	err := viper.ReadInConfig()
 	if _, ok := err.(viper.ConfigFileNotFoundError); ok {
 		configFile := filepath.Join(daemonHome, "config.json")
@@ -78,6 +79,8 @@ func (cs *ConfigService) setupConfig() error {
 			return err
 		}
 	}
+
+	viper.WatchConfig()
 	return nil
 }
 

@@ -37,54 +37,41 @@ type daemon struct {
 	configService     *ConfigService
 	golinksService    *GolinksService
 	webserver         *Webserver
-	worker            *Worker
+	workerManager     *WorkerManager
 	chainTracker      *ChainTracker
+	gui               *GUI
 
 	chainMutex sync.Mutex
+}
+
+func NewDaemonWithGUI() (*daemon, error) {
+	d, err := NewDaemon()
+	if err != nil {
+		return nil, err
+	}
+
+	d.gui, err = NewGUI(d)
+	if err != nil {
+		return nil, err
+	}
+
+	return d, nil
 }
 
 func NewDaemon() (*daemon, error) {
 	// SERVICES
 	d := &daemon{}
-	cs, err := NewConfigService(d)
-	if err != nil {
-		errln("failed to initialize configuration service")
-	}
-	d.configService = cs
-
-	bs, err := NewBlockchainService(d)
-	if err != nil {
-		errln("failed to initialize blockchain service")
+	if err := d.initializeServies(); err != nil {
 		return nil, err
 	}
-	d.blockchainService = bs
 
-	gs, err := NewGolinksService(d)
-	if err != nil {
-		errln("failed to iniitalize golinks service")
-	}
-	d.golinksService = gs
-
-	// WORKERS
-	webserver, err := NewWebserver(d)
-	if err != nil {
-		errln("failed to initialize webserver")
+	if err := d.initializeBackgroundTasks(); err != nil {
 		return nil, err
 	}
-	d.webserver = webserver
 
-	worker, err := NewWorker(d)
-	if err != nil {
-		errln("failed to initialize worker")
+	if err := d.initializeGUI(); err != nil {
 		return nil, err
 	}
-	d.worker = worker
-
-	ct, err := NewChainTracker(d)
-	if err != nil {
-		errln("failed to initialize chain tracker")
-	}
-	d.chainTracker = ct
 
 	// DAEMON CONFIG
 	serviceConfig := &service.Config{
@@ -105,6 +92,59 @@ func NewDaemon() (*daemon, error) {
 	}
 
 	return d, nil
+}
+
+func (d *daemon) initializeServies() error {
+	cs, err := NewConfigService(d)
+	if err != nil {
+		errln("failed to initialize configuration service")
+	}
+	d.configService = cs
+
+	gs, err := NewGolinksService(d)
+	if err != nil {
+		errln("failed to iniitalize golinks service")
+	}
+	d.golinksService = gs
+
+	return nil
+}
+
+func (d *daemon) initializeBackgroundTasks() error {
+	// WORKERS
+	webserver, err := NewWebserver(d)
+	if err != nil {
+		errln("failed to initialize webserver")
+		return err
+	}
+	d.webserver = webserver
+
+	workerManager, err := NewWorkerManager(d)
+	if err != nil {
+		errln("failed to initialize worker")
+		return err
+	}
+	d.workerManager = workerManager
+
+	ct, err := NewChainTracker(d)
+	if err != nil {
+		errln("failed to initialize chain tracker")
+		return err
+	}
+	d.chainTracker = ct
+
+	return nil
+}
+
+func (d *daemon) initializeGUI() error {
+
+	gui, err := NewGUI(d)
+	if err != nil {
+		errln("failed to initialize GUI")
+		return err
+	}
+	d.gui = gui
+	return nil
 }
 
 func (d *daemon) Execute() error {
@@ -129,7 +169,7 @@ func (d *daemon) run() error {
 	workerCtx, cancelDaemon := context.WithCancel(primaryContext)
 
 	d.errorGroup.Go(func() error {
-		return d.ExecuteWorker(workerCtx)
+		return d.ExecuteWorkerManager(workerCtx)
 	})
 	d.cancelFuncs = append(d.cancelFuncs, cancelDaemon)
 
@@ -147,13 +187,17 @@ func (d *daemon) ExecuteFrontend(ctx context.Context) error {
 	return d.webserver.Execute(ctx)
 }
 
-func (d *daemon) ExecuteWorker(ctx context.Context) error {
-	return d.worker.Execute(ctx)
+func (d *daemon) ExecuteWorkerManager(ctx context.Context) error {
+	return d.workerManager.Execute(ctx)
 }
 
 func (d *daemon) Start(s service.Service) error {
 	go d.run()
 	return nil
+}
+
+func (d *daemon) StopDaemon() error {
+	return d.Stop(d.service)
 }
 
 func (d *daemon) Stop(s service.Service) error {
@@ -163,6 +207,13 @@ func (d *daemon) Stop(s service.Service) error {
 		cancel()
 	}
 	d.errorGroup.Wait()
+
+	if d.gui != nil {
+		logln("calling quit on GUI")
+		d.gui.app.Quit()
+		d.gui.daemon = nil
+		d.gui = nil
+	}
 	return nil
 }
 
@@ -172,4 +223,9 @@ func (d *daemon) HomeDir() string {
 
 func (d *daemon) ExecuteChainTracker(ctx context.Context) error {
 	return d.chainTracker.Execute(ctx)
+}
+
+// WARN: this must be executed from the main thread
+func (d *daemon) RunGUI() {
+	d.gui.ShowAndRun()
 }

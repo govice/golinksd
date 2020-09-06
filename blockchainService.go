@@ -21,7 +21,6 @@ import (
 
 	"github.com/govice/golinks/block"
 	"github.com/govice/golinks/blockchain"
-	"github.com/spf13/viper"
 )
 
 type BlockchainService struct {
@@ -30,16 +29,9 @@ type BlockchainService struct {
 	daemon *daemon
 }
 
-var blockchainService *BlockchainService
-
 func NewBlockchainService(daemon *daemon) (*BlockchainService, error) {
 	bs := &BlockchainService{
 		daemon: daemon,
-	}
-
-	//TODO remove with load ledger
-	if viper.GetBool("genesis") {
-		blockchainService.resetChain()
 	}
 
 	return bs, nil

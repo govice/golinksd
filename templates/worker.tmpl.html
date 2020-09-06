@@ -1,0 +1,54 @@
+<!doctype html>
+
+
+<html>
+
+<head>
+	<title>{{ .title }}</title>
+	{{ template "header.tmpl.html" . }}
+	<title>Hello World</title>
+
+</head>
+
+<body>
+	<div class="container">
+		{{ template "navbar.tmpl.html" . }}
+		<div class="row">
+			<div class="col">
+				<h1>Golinks Daemon</h1>
+			</div>
+		</div>
+
+		<div class="card bg-dark mb-2">
+            <div class="card-body">
+                <h5 class="card-title text-light">Worker</h5>
+                <div class="row mx-1 mb-1 w-auto">
+                    <table class="table table-light">
+                        <tbody>
+                            <tr>
+                                <th scope="row">Root Directory</th>
+                                <td>{{ .Root }}</td>
+                            </tr>
+                            <tr>
+                                <th scope="row">Refresh Period</th>
+                                <td>{{ .RefreshPeriod }} ms</td>
+                            </tr>
+                        </tbody>
+                        </table>
+                </div>
+                <div class="row mx-1 mb-1 w-auto">
+                    <div class="col">
+                        <form action="/console/worker/delete/{{ .Index }}" method="POST">
+                            <button type="submit" class="btn btn-block btn-danger mb-2">Delete</button>
+                        </form>
+                        <a href="/console" class="btn btn-block btn-primary">Home</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+	</div>
+	{{ template "scripts.tmpl.html" . }}
+</body>
+
+</html>

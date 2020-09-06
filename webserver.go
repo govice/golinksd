@@ -16,16 +16,18 @@ package main
 
 import (
 	"context"
-	"log"
 	"net/http"
+	"os"
 
 	"github.com/gin-gonic/gin"
 	"github.com/spf13/viper"
 )
 
 type Webserver struct {
-	router *gin.Engine
-	daemon *daemon
+	router            *gin.Engine
+	daemon            *daemon
+	blockchainService *BlockchainService
+	workerService     *WorkerService
 }
 
 func NewWebserver(daemon *daemon) (*Webserver, error) {
@@ -34,6 +36,35 @@ func NewWebserver(daemon *daemon) (*Webserver, error) {
 		daemon: daemon,
 	}
 
+	bs, err := NewBlockchainService(daemon)
+	if err != nil {
+		errln("failed to initialize blockchain service")
+		return nil, err
+	}
+	w.blockchainService = bs
+
+	ws, err := NewWorkerService(daemon)
+	if err != nil {
+		errln("failed to initializie worker service")
+		return nil, err
+	}
+	w.workerService = ws
+
+	//TODO remove with load ledger
+	if viper.GetBool("genesis") {
+		bs.resetChain()
+	}
+
+	templateResourceHome := daemon.HomeDir() + "/templates"
+	_, err = os.Stat(templateResourceHome)
+	// TODO in dev mode this should force to cwd
+	if os.IsNotExist(err) {
+		logln("defaulting to templates in cwd")
+		w.router.LoadHTMLGlob("./templates/*")
+	} else {
+		logln("loading templates from", templateResourceHome)
+		w.router.LoadHTMLGlob(templateResourceHome + "/*")
+	}
 	if err := w.registerFrontendRoutes(); err != nil {
 		errln("failed to initialize frontend routes")
 		return nil, err
@@ -47,13 +78,6 @@ func NewWebserver(daemon *daemon) (*Webserver, error) {
 }
 
 func (w *Webserver) registerFrontendRoutes() error {
-	templatesHome := viper.GetString("templates_home")
-	log.Println("Templates Home: " + templatesHome)
-	if templatesHome != "" {
-		w.router.LoadHTMLGlob(templatesHome + "/*")
-	} else {
-		w.router.LoadHTMLGlob("./templates/*")
-	}
 	w.router.GET("/error", func(c *gin.Context) {
 		c.HTML(http.StatusOK, "error.html", gin.H{
 			"title": "GoLinks | Error",

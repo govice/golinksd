@@ -53,11 +53,12 @@ func (ct *ChainTracker) Execute(ctx context.Context) error {
 	for {
 		select {
 		case <-syncTicker.C:
+			logln("running periodic sync...")
 			if err := ct.checkAndSync(); err != nil {
 				errln("check and sync failed", err)
 			}
 		case wg := <-ct.forceSyncChan:
-			logln("received force sync")
+			logln("received force sync...")
 			if err := ct.checkAndSync(); err != nil {
 				errln("force sync failed", err)
 			}
@@ -85,16 +86,12 @@ func (ct *ChainTracker) checkAndSync() error {
 		return err
 	}
 
-	logln("Local chain length", syncInfo.LocalLength)
-	logln("Remote chain length", syncInfo.RemoteLength)
 	if syncInfo.NeedsSync {
-		logln("synchronizing local chain with remote")
+		logf("synchronizing local chain (%d) with remote (%d)\n", syncInfo.LocalLength, syncInfo.RemoteLength)
 		if err := ct.synchronize(syncInfo); err != nil {
 			errln("failed to synchronize chain", err)
 			return err
 		}
-	} else {
-		logln("local chain up-to-date with remote")
 	}
 
 	return nil

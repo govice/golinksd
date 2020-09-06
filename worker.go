@@ -26,35 +26,33 @@ import (
 	"github.com/govice/golinks/block"
 	"github.com/govice/golinks/blockchain"
 	"github.com/govice/golinks/blockmap"
-	"github.com/spf13/viper"
 )
 
 type Worker struct {
-	daemon *daemon
-}
-
-func NewWorker(daemon *daemon) (*Worker, error) {
-	return &Worker{daemon: daemon}, nil
+	daemon           *daemon
+	cancelFunc       context.CancelFunc
+	RootPath         string `json:"root_path"`
+	GenerationPeriod int    `json:"generation_period"`
+	running          bool
 }
 
 var ErrBadRootPath = errors.New("bad root_path")
 
 func (w *Worker) Execute(ctx context.Context) error {
-	logln("starting worker")
 	// TODO pull this from its own config file(s)
-	rootPath := viper.GetString("root_path")
-	fi, err := os.Stat(rootPath)
+	fi, err := os.Stat(w.RootPath)
 	if err != nil || !fi.IsDir() {
 		logln(err)
 		return ErrBadRootPath
 	}
-	absRootPath, err := filepath.Abs(rootPath)
+	absRootPath, err := filepath.Abs(w.RootPath)
 	if err != nil {
 		return err
 	}
-	period := viper.GetInt("generation_period")
-	logln("generation_period:", period, "ms")
-	generationTicker := time.NewTicker(time.Duration(period) * time.Millisecond)
+
+	logln("starting worker:", w.RootPath)
+	logln("generation_period:", w.GenerationPeriod, "ms")
+	generationTicker := time.NewTicker(time.Duration(w.GenerationPeriod) * time.Millisecond)
 	logln("generating startup blockmap")
 
 	if err := w.generateAndUploadBlockmap(absRootPath); err != nil {
@@ -72,7 +70,10 @@ func (w *Worker) Execute(ctx context.Context) error {
 		case <-generationTicker.C:
 			logln("generating scheduled blockmap for tick")
 			if err := w.generateAndUploadBlockmap(absRootPath); err != nil {
-				errln("scheduled blockmap generation failed")
+				errln("scheduled blockmap generation failed. Retrying...")
+				if err := w.generateAndUploadBlockmap(absRootPath); err != nil {
+					errln("blockmap generation and upload failed")
+				}
 			}
 		}
 	}

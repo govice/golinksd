@@ -19,7 +19,7 @@ import (
 )
 
 func main() {
-	d, err := NewDaemon()
+	d, err := NewDaemonWithGUI()
 	if err != nil {
 		fatalln(err)
 	}
@@ -27,7 +27,15 @@ func main() {
 	logln("PORT: " + viper.GetString("port"))
 	logln("AUTH_SERVER: " + viper.GetString("auth_server"))
 
+	// go func() {
 	if err := d.Execute(); err != nil {
+		fatalln(err)
+	}
+	// }()
+
+	// d.RunGUI()
+
+	if err := d.StopDaemon(); err != nil {
 		fatalln(err)
 	}
 }
