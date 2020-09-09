@@ -61,7 +61,7 @@ func NewDaemonWithGUI() (*daemon, error) {
 func NewDaemon() (*daemon, error) {
 	// SERVICES
 	d := &daemon{}
-	if err := d.initializeServies(); err != nil {
+	if err := d.initializeServices(); err != nil {
 		return nil, err
 	}
 
@@ -90,16 +90,18 @@ func NewDaemon() (*daemon, error) {
 	return d, nil
 }
 
-func (d *daemon) initializeServies() error {
+func (d *daemon) initializeServices() error {
 	cs, err := NewConfigService(d)
 	if err != nil {
 		errln("failed to initialize configuration service")
+		return err
 	}
 	d.configService = cs
 
 	gs, err := NewGolinksService(d)
 	if err != nil {
 		errln("failed to iniitalize golinks service")
+		return err
 	}
 	d.golinksService = gs
 

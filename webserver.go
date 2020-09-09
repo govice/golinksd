@@ -55,7 +55,8 @@ func NewWebserver(daemon *daemon) (*Webserver, error) {
 		bs.resetChain()
 	}
 
-	templateResourceHome := daemon.HomeDir() + "/templates"
+	templateResourceHome := viper.GetString("templates_home")
+	logln("looking for templates in", templateResourceHome)
 	_, err = os.Stat(templateResourceHome)
 	// TODO in dev mode this should force to cwd
 	if os.IsNotExist(err) {
