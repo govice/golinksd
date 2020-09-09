@@ -93,14 +93,25 @@ func (cs *ConfigService) HomeDir() string {
 
 func (cs *ConfigService) checkLogin() error {
 	tokenPath := filepath.Join(cs.HomeDir(), "credentials.json")
-
 	if _, err := os.Stat(tokenPath); errors.Is(err, os.ErrNotExist) {
-		token, err := cs.promptLogin()
-		if err != nil {
-			errln("failed to prompt login:", err)
-			return err
-		}
+		email, eok := os.LookupEnv("GOLINKSD_USER")
+		password, pok := os.LookupEnv("GOLINKSD_PASSWORD")
+		var token *JWT
+		//validate environment defined credentials
+		if eok && pok {
+			token, err = cs.authenticate(email, password)
+			if err != nil {
+				errln(err)
+				return err
+			}
 
+		} else {
+			token, err = cs.promptLogin()
+			if err != nil {
+				errln("failed to prompt login:", err)
+				return err
+			}
+		}
 		tokenBytes, err := json.Marshal(token)
 		if err != nil {
 			errln("failed marshal token:", err)
@@ -109,6 +120,7 @@ func (cs *ConfigService) checkLogin() error {
 
 		if err := ioutil.WriteFile(tokenPath, tokenBytes, os.ModePerm); err != nil {
 			errln("failed to write credentials file:", err)
+			return err
 		}
 		cs.token = token
 	} else {
