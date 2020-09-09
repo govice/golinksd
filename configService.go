@@ -56,12 +56,14 @@ func (cs *ConfigService) setupConfig() error {
 	viper.SetConfigName("config")
 	viper.SetConfigType("json")
 	viper.SetEnvPrefix("golinksd")
+	viper.AutomaticEnv()
 	viper.SetDefault("peer_port", 7777)
 	viper.SetDefault("auth_server", "https://govice.org")
 	viper.SetDefault("port", 8080)
 	viper.SetDefault("genesis", false)
 	viper.SetDefault("delay_startup", 0)
 	viper.SetDefault("templates_home", "./templates")
+	viper.SetDefault("tracking_period", 30000)
 
 	viper.AddConfigPath(daemonHome)
 
@@ -91,16 +93,29 @@ func (cs *ConfigService) HomeDir() string {
 	return filepath.Join(homeDir, ".golinksd")
 }
 
+var ErrNotAuthorized = errors.New("Not Authorized.")
+
 func (cs *ConfigService) checkLogin() error {
 	tokenPath := filepath.Join(cs.HomeDir(), "credentials.json")
-
 	if _, err := os.Stat(tokenPath); errors.Is(err, os.ErrNotExist) {
-		token, err := cs.promptLogin()
-		if err != nil {
-			errln("failed to prompt login:", err)
-			return err
-		}
+		email, eok := os.LookupEnv("GOLINKSD_USER")
+		password, pok := os.LookupEnv("GOLINKSD_PASSWORD")
+		var token *JWT
+		//validate environment defined credentials
+		if eok && pok {
+			token, err = cs.authenticate(email, password)
+			if err != nil {
+				errln(err)
+				return ErrNotAuthorized
+			}
 
+		} else {
+			token, err = cs.promptLogin()
+			if err != nil {
+				errln("failed to prompt login:", err)
+				return ErrNotAuthorized
+			}
+		}
 		tokenBytes, err := json.Marshal(token)
 		if err != nil {
 			errln("failed marshal token:", err)
@@ -109,6 +124,7 @@ func (cs *ConfigService) checkLogin() error {
 
 		if err := ioutil.WriteFile(tokenPath, tokenBytes, os.ModePerm); err != nil {
 			errln("failed to write credentials file:", err)
+			return err
 		}
 		cs.token = token
 	} else {

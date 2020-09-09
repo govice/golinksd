@@ -1,0 +1,7 @@
+{
+    "auth_server": "https://govice.org",
+    "port": 8082,
+    "authorization_endpoint": "https://govice.org/api/login",
+    "chain_length_endpoint": "https://master.govice.org/api/chain/length",
+    "chain_block_endpoint": "https://master.govice.org/api/chain"
+}

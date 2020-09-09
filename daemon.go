@@ -39,7 +39,7 @@ type daemon struct {
 	webserver         *Webserver
 	workerManager     *WorkerManager
 	chainTracker      *ChainTracker
-	gui               *GUI
+	// gui               *GUI
 
 	chainMutex sync.Mutex
 }
@@ -50,10 +50,10 @@ func NewDaemonWithGUI() (*daemon, error) {
 		return nil, err
 	}
 
-	d.gui, err = NewGUI(d)
-	if err != nil {
-		return nil, err
-	}
+	// d.gui, err = NewGUI(d)
+	// if err != nil {
+	// 	return nil, err
+	// }
 
 	return d, nil
 }
@@ -61,15 +61,11 @@ func NewDaemonWithGUI() (*daemon, error) {
 func NewDaemon() (*daemon, error) {
 	// SERVICES
 	d := &daemon{}
-	if err := d.initializeServies(); err != nil {
+	if err := d.initializeServices(); err != nil {
 		return nil, err
 	}
 
 	if err := d.initializeBackgroundTasks(); err != nil {
-		return nil, err
-	}
-
-	if err := d.initializeGUI(); err != nil {
 		return nil, err
 	}
 
@@ -94,16 +90,18 @@ func NewDaemon() (*daemon, error) {
 	return d, nil
 }
 
-func (d *daemon) initializeServies() error {
+func (d *daemon) initializeServices() error {
 	cs, err := NewConfigService(d)
 	if err != nil {
 		errln("failed to initialize configuration service")
+		return err
 	}
 	d.configService = cs
 
 	gs, err := NewGolinksService(d)
 	if err != nil {
 		errln("failed to iniitalize golinks service")
+		return err
 	}
 	d.golinksService = gs
 
@@ -133,17 +131,6 @@ func (d *daemon) initializeBackgroundTasks() error {
 	}
 	d.chainTracker = ct
 
-	return nil
-}
-
-func (d *daemon) initializeGUI() error {
-
-	gui, err := NewGUI(d)
-	if err != nil {
-		errln("failed to initialize GUI")
-		return err
-	}
-	d.gui = gui
 	return nil
 }
 
@@ -208,12 +195,12 @@ func (d *daemon) Stop(s service.Service) error {
 	}
 	d.errorGroup.Wait()
 
-	if d.gui != nil {
-		logln("calling quit on GUI")
-		d.gui.app.Quit()
-		d.gui.daemon = nil
-		d.gui = nil
-	}
+	// if d.gui != nil {
+	// 	logln("calling quit on GUI")
+	// 	d.gui.app.Quit()
+	// 	d.gui.daemon = nil
+	// 	d.gui = nil
+	// }
 	return nil
 }
 
@@ -226,6 +213,6 @@ func (d *daemon) ExecuteChainTracker(ctx context.Context) error {
 }
 
 // WARN: this must be executed from the main thread
-func (d *daemon) RunGUI() {
-	d.gui.ShowAndRun()
-}
+// func (d *daemon) RunGUI() {
+// 	d.gui.ShowAndRun()
+// }

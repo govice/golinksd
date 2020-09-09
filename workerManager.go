@@ -19,6 +19,7 @@ import (
 	"encoding/json"
 	"errors"
 	"io/ioutil"
+	"os"
 	"path/filepath"
 	"sync"
 
@@ -60,6 +61,13 @@ func (w *WorkerManager) loadWorkerConfig() (*WorkerConfig, error) {
 	defer w.mu.Unlock()
 	logln("loading worker config...")
 	workerConfigPath := filepath.Join(w.daemon.configService.HomeDir(), "workers.json")
+
+	_, err := os.Stat(workerConfigPath)
+	if os.IsNotExist(err) {
+		logln("no worker configuration defined, initializing with empty config")
+		return &WorkerConfig{}, nil
+	}
+
 	configBytes, err := ioutil.ReadFile(workerConfigPath)
 	if err != nil {
 		return nil, err

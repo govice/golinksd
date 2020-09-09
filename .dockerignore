@@ -1,1 +1,24 @@
 golinksd*
+# Binaries for programs and plugins
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+*.volume
+golinksd
+golinks-daemon
+# Test binary, build with `go test -c`
+*.test
+
+# Output of the go coverage tool, specifically when used with LiteIDE
+*.out
+
+*.env
+
+/build
+/.circleci
+/assets
+docker-compose.yaml
+Makefile
+
