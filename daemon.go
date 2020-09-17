@@ -44,20 +44,6 @@ type daemon struct {
 	chainMutex sync.Mutex
 }
 
-func NewDaemonWithGUI() (*daemon, error) {
-	d, err := NewDaemon()
-	if err != nil {
-		return nil, err
-	}
-
-	// d.gui, err = NewGUI(d)
-	// if err != nil {
-	// 	return nil, err
-	// }
-
-	return d, nil
-}
-
 func NewDaemon() (*daemon, error) {
 	// SERVICES
 	d := &daemon{}

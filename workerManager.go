@@ -78,11 +78,19 @@ func (w *WorkerManager) loadWorkerConfig() (*WorkerConfig, error) {
 		return nil, err
 	}
 
+	// reinitialize with initialized worker
+	configOut := &WorkerConfig{}
 	for _, worker := range workerConfig.Workers {
+		w, err := NewWorker(w.daemon, worker.RootPath, worker.GenerationPeriod)
+		if err != nil {
+			errln("failed to create new worker", err)
+			return nil, err
+		}
+		configOut.Workers = append(configOut.Workers, w)
 		worker.daemon = w.daemon
 	}
 
-	return workerConfig, nil
+	return configOut, nil
 }
 
 func (w *WorkerManager) saveWorkerConfig() error {
@@ -123,10 +131,10 @@ func (w *WorkerManager) startWorkers(ctx context.Context) error {
 			continue
 		}
 		workerCtx, workerCancelFunc := context.WithCancel(ctx)
-		worker.cancelFunc = func() {
+		worker.AddCancelFunc(func() {
 			workerCancelFunc()
 			worker.running = false
-		}
+		})
 		w.errorGroup.Go(func() error { return worker.Execute(workerCtx) })
 		worker.running = true
 	}
@@ -160,10 +168,10 @@ func (w *WorkerManager) getWorker(index int) *Worker {
 func (w *WorkerManager) addWorker(rootPath string, generationPeriod int) (*Worker, error) {
 	w.mu.Lock()
 	defer w.mu.Unlock()
-	worker := &Worker{
-		daemon:           w.daemon,
-		RootPath:         rootPath,
-		GenerationPeriod: generationPeriod,
+
+	worker, err := NewWorker(w.daemon, rootPath, generationPeriod)
+	if err != nil {
+		return nil, err
 	}
 
 	w.WorkerConfig.Workers = append(w.WorkerConfig.Workers, worker)

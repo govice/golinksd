@@ -8,6 +8,7 @@ require (
 	github.com/kardianos/service v1.1.0
 	github.com/manifoldco/promptui v0.7.0
 	github.com/niemeyer/pretty v0.0.0-20200227124842-a10e7caefd8e // indirect
+	github.com/rs/xid v1.2.1
 	github.com/spf13/viper v1.7.1
 	github.com/stretchr/testify v1.6.1 // indirect
 	golang.org/x/sync v0.0.0-20200317015054-43a5402ce75a
