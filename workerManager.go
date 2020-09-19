@@ -81,7 +81,7 @@ func (w *WorkerManager) loadWorkerConfig() (*WorkerConfig, error) {
 	// reinitialize with initialized worker
 	configOut := &WorkerConfig{}
 	for _, worker := range workerConfig.Workers {
-		w, err := NewWorker(w.daemon, worker.RootPath, worker.GenerationPeriod)
+		w, err := NewWorker(w.daemon, worker.RootPath, worker.GenerationPeriod, worker.IgnorePaths)
 		if err != nil {
 			errln("failed to create new worker", err)
 			return nil, err
@@ -165,11 +165,11 @@ func (w *WorkerManager) getWorker(index int) *Worker {
 	return w.WorkerConfig.Workers[index]
 }
 
-func (w *WorkerManager) addWorker(rootPath string, generationPeriod int) (*Worker, error) {
+func (w *WorkerManager) addWorker(rootPath string, generationPeriod int, ignorePaths []string) (*Worker, error) {
 	w.mu.Lock()
 	defer w.mu.Unlock()
 
-	worker, err := NewWorker(w.daemon, rootPath, generationPeriod)
+	worker, err := NewWorker(w.daemon, rootPath, generationPeriod, ignorePaths)
 	if err != nil {
 		return nil, err
 	}
