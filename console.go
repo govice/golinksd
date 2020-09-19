@@ -188,7 +188,8 @@ func (w *Webserver) registerConsoleHandlers() error {
 			return
 		}
 
-		if err := w.workerService.addWorker(rootPath, generationPeriod); err != nil {
+		//TODO IGNORE PATHS
+		if err := w.workerService.addWorker(rootPath, generationPeriod, nil); err != nil {
 			c.AbortWithError(http.StatusInternalServerError, err)
 			return
 		}

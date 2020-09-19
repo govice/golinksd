@@ -34,8 +34,9 @@ import (
 type Worker struct {
 	daemon           *daemon
 	cancelFunc       context.CancelFunc
-	RootPath         string `json:"root_path"`
-	GenerationPeriod int    `json:"generation_period"`
+	RootPath         string   `json:"root_path"`
+	GenerationPeriod int      `json:"generation_period"`
+	IgnorePaths      []string `json:"ignore_paths"`
 	running          bool
 	id               string
 	logger           *log.Logger
@@ -50,14 +51,10 @@ func (w *Worker) Execute(ctx context.Context) error {
 		logln(err)
 		return ErrBadRootPath
 	}
-	absRootPath, err := filepath.Abs(w.RootPath)
-	if err != nil {
-		return err
-	}
 
 	w.logger.Println("starting worker:", w.RootPath)
 	w.logger.Println("generating startup blockmap")
-	if err := w.generateAndUploadBlockmap(absRootPath); err != nil {
+	if err := w.generateAndUploadBlockmap(); err != nil {
 		w.logger.Println("initial blockmap generation failed", err)
 	}
 
@@ -72,10 +69,10 @@ func (w *Worker) Execute(ctx context.Context) error {
 			return nil //TODO err canceled?
 		case <-generationTicker.C:
 			w.logger.Println("generating scheduled blockmap for tick")
-			if err := w.generateAndUploadBlockmap(absRootPath); err != nil {
+			if err := w.generateAndUploadBlockmap(); err != nil {
 				w.logger.Println("scheduled blockmap generation failed. Retrying...")
 				generationTicker.Stop()
-				if err := w.generateAndUploadBlockmap(absRootPath); err != nil {
+				if err := w.generateAndUploadBlockmap(); err != nil {
 					w.logger.Println("blockmap generation and upload failed")
 				}
 				generationTicker.Reset(time.Duration(w.GenerationPeriod))
@@ -84,8 +81,8 @@ func (w *Worker) Execute(ctx context.Context) error {
 	}
 }
 
-func (w *Worker) generateAndUploadBlockmap(rootPath string) error {
-	blkmap, err := w.generateBlockmap(rootPath)
+func (w *Worker) generateAndUploadBlockmap() error {
+	blkmap, err := w.generateBlockmap()
 	if err != nil {
 		w.logger.Println("failed to generate blockmap", err)
 		return err
@@ -128,11 +125,12 @@ func (w *Worker) generateAndUploadBlockmap(rootPath string) error {
 	return nil
 }
 
-func (w *Worker) generateBlockmap(rootPath string) (*blockmap.BlockMap, error) {
-	w.logger.Println("generating blockmap for", rootPath)
-	blkmap := blockmap.New(rootPath)
+func (w *Worker) generateBlockmap() (*blockmap.BlockMap, error) {
+	w.logger.Println("generating blockmap for", w.RootPath)
+	blkmap := blockmap.New(w.RootPath)
+	blkmap.SetIgnorePaths(w.IgnorePaths)
 	if err := blkmap.Generate(); err != nil {
-		w.logger.Println("failed to generate blockmap for", rootPath, err)
+		w.logger.Println("failed to generate blockmap for", w.RootPath, err)
 		return nil, err
 	}
 
@@ -147,7 +145,7 @@ func (w *Worker) logln(v ...interface{}) {
 	w.logger.Println(v...)
 }
 
-func NewWorker(daemon *daemon, rootPath string, generationPeriod int) (*Worker, error) {
+func NewWorker(daemon *daemon, rootPath string, generationPeriod int, ignorePaths []string) (*Worker, error) {
 	workerID := xid.NewWithTime(time.Now()).String()
 	workerLogsDir := filepath.Join(daemon.configService.HomeDir(), "logs")
 	os.Mkdir(workerLogsDir, os.ModePerm)
@@ -163,6 +161,7 @@ func NewWorker(daemon *daemon, rootPath string, generationPeriod int) (*Worker, 
 		GenerationPeriod: generationPeriod,
 		logger:           log.New(io.MultiWriter(f, os.Stderr), workerID+" ", log.Ltime),
 		id:               workerID,
+		IgnorePaths:      ignorePaths,
 	}
 
 	worker.AddCancelFunc(func() {
