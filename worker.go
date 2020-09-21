@@ -82,9 +82,14 @@ func (w *Worker) Execute(ctx context.Context) error {
 }
 
 func (w *Worker) generateAndUploadBlockmap() error {
-	blkmap, err := w.generateBlockmap()
-	if err != nil {
-		w.logger.Println("failed to generate blockmap", err)
+	blkmap := blockmap.New(w.RootPath)
+	blkmap.AutoIgnore = true
+	blkmap.SetIgnorePaths(w.IgnorePaths)
+	var ignoredPathsErr *blockmap.IgnoredPathErr
+	if err := blkmap.Generate(); errors.As(err, &ignoredPathsErr) {
+		w.logger.Println("encounted ignored paths:", ignoredPathsErr.Error())
+	} else if err != nil {
+		w.logger.Println("failed to generate blockmap for", w.RootPath, err)
 		return err
 	}
 
@@ -123,18 +128,6 @@ func (w *Worker) generateAndUploadBlockmap() error {
 	}
 
 	return nil
-}
-
-func (w *Worker) generateBlockmap() (*blockmap.BlockMap, error) {
-	w.logger.Println("generating blockmap for", w.RootPath)
-	blkmap := blockmap.New(w.RootPath)
-	blkmap.SetIgnorePaths(w.IgnorePaths)
-	if err := blkmap.Generate(); err != nil {
-		w.logger.Println("failed to generate blockmap for", w.RootPath, err)
-		return nil, err
-	}
-
-	return blkmap, nil
 }
 
 func (w *Worker) uploadBlock(blk *block.Block) error {
