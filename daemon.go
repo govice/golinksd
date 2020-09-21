@@ -29,6 +29,7 @@ var (
 )
 
 type daemon struct {
+	primaryCancel     context.CancelFunc
 	cancelFuncs       []context.CancelFunc
 	service           service.Service
 	logger            service.Logger
@@ -128,10 +129,8 @@ func (d *daemon) Execute() error {
 }
 
 func (d *daemon) run() error {
-
 	primaryContext, primaryCancel := context.WithCancel(context.Background())
-
-	d.cancelFuncs = append(d.cancelFuncs, primaryCancel)
+	d.primaryCancel = primaryCancel
 
 	if viper.GetBool("development") {
 		d.errorGroup.Go(func() error {
@@ -174,19 +173,8 @@ func (d *daemon) StopDaemon() error {
 }
 
 func (d *daemon) Stop(s service.Service) error {
-	//TODO hold primary context and use it to cancel children?
-	for i, cancel := range d.cancelFuncs {
-		logf("canceling context %d/%d\n", i+1, len(d.cancelFuncs))
-		cancel()
-	}
+	d.primaryCancel()
 	d.errorGroup.Wait()
-
-	// if d.gui != nil {
-	// 	logln("calling quit on GUI")
-	// 	d.gui.app.Quit()
-	// 	d.gui.daemon = nil
-	// 	d.gui = nil
-	// }
 	return nil
 }
 
