@@ -84,10 +84,11 @@ func (w *Worker) Execute(ctx context.Context) error {
 func (w *Worker) generateAndUploadBlockmap() error {
 	blkmap := blockmap.New(w.RootPath)
 	blkmap.AutoIgnore = true
+	blkmap.FailOnError = false
 	blkmap.SetIgnorePaths(w.IgnorePaths)
-	var ignoredPathsErr *blockmap.IgnoredPathErr
-	if err := blkmap.Generate(); errors.As(err, &ignoredPathsErr) {
-		w.logger.Println("encounted ignored paths:", ignoredPathsErr.Error())
+	var generationErr *blockmap.GenerationError
+	if err := blkmap.Generate(); errors.As(err, &generationErr) {
+		w.logger.Println(generationErr)
 	} else if err != nil {
 		w.logger.Println("failed to generate blockmap for", w.RootPath, err)
 		return err
