@@ -4,7 +4,7 @@ go 1.15
 
 require (
 	github.com/gin-gonic/gin v1.6.3
-	github.com/govice/golinks v0.1.5
+	github.com/govice/golinks v0.1.6
 	github.com/kardianos/service v1.1.0
 	github.com/manifoldco/promptui v0.7.0
 	github.com/niemeyer/pretty v0.0.0-20200227124842-a10e7caefd8e // indirect
