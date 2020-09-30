@@ -71,6 +71,7 @@ func (w *Worker) generateAndUploadBlockmap() error {
 	blkmap := blockmap.New(w.RootPath)
 	blkmap.AutoIgnore = true
 	blkmap.FailOnError = false
+	blkmap.IOThrottleSize = 1024 * 100 //100 MB
 	blkmap.SetIgnorePaths(w.IgnorePaths)
 	var generationErr *blockmap.GenerationError
 	if err := blkmap.Generate(); errors.As(err, &generationErr) {
