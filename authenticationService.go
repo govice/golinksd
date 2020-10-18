@@ -9,9 +9,15 @@ import (
 )
 
 type AuthenticationService struct {
+	daemon *daemon
 }
 
-var authService *AuthenticationService
+func NewAuthenticationService(daemon *daemon) (*AuthenticationService, error) {
+	as := &AuthenticationService{
+		daemon: daemon,
+	}
+	return as, nil
+}
 
 func (service *AuthenticationService) valid(userAuth *externalUserAuth) (bool, error) {
 	authServerURI := viper.GetString("auth_server")
