@@ -18,7 +18,7 @@ func (w *Webserver) externalAuthenticator() gin.HandlerFunc {
 			Email: c.Query("email"),
 		}
 
-		ok, err := authService.valid(userAuth)
+		ok, err := w.authService.valid(userAuth)
 		if (err == nil) && ok {
 			c.Next()
 			return

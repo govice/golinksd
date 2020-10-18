@@ -14,6 +14,7 @@ type Webserver struct {
 	daemon            *daemon
 	blockchainService *BlockchainService
 	workerService     *WorkerService
+	authService       *AuthenticationService
 }
 
 func NewWebserver(daemon *daemon) (*Webserver, error) {
@@ -35,6 +36,13 @@ func NewWebserver(daemon *daemon) (*Webserver, error) {
 		return nil, err
 	}
 	w.workerService = ws
+
+	as, err := NewAuthenticationService(daemon)
+	if err != nil {
+		errln("failed to initialize authentication service")
+		return nil, err
+	}
+	w.authService = as
 
 	//TODO remove with load ledger
 	if viper.GetBool("genesis") {
