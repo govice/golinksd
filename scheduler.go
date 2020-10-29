@@ -45,7 +45,7 @@ func (s *Scheduler) Schedule(id string, work func() error) error {
 }
 
 func (s *Scheduler) Run(c context.Context) {
-	var t *Task
+
 	var wg sync.WaitGroup
 
 	defer func() {
@@ -54,10 +54,16 @@ func (s *Scheduler) Run(c context.Context) {
 	}()
 
 	for {
+		var t *Task
 		if len(s.queue) == 0 {
-			logln("scheduler queue empty, sleeping...")
+			time.Sleep(time.Second * 1)
+			continue
+		} else if len(s.queue) > 1 {
+			t, s.queue = s.queue[0], s.queue[1:]
+		} else {
+			t, s.queue = s.queue[0], nil
 		}
-		t, s.queue = s.queue[0], s.queue[1:]
+
 		select {
 		case s.sem <- struct{}{}:
 			wg.Add(1)
@@ -72,15 +78,6 @@ func (s *Scheduler) Run(c context.Context) {
 		case <-c.Done():
 			logln(s.id, "stopping scheduler limiter")
 			return
-
-		default:
-			wg.Add(1)
-			logln(t.ID, "executing...")
-			if err := t.Work(); err != nil {
-				errln(t.ID, "failed")
-			}
-			wg.Done()
 		}
 	}
-
 }
