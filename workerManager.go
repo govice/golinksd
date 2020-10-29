@@ -18,6 +18,7 @@ type WorkerManager struct {
 	WorkerConfig *WorkerConfig
 	ctx          context.Context
 	mu           *sync.Mutex
+	scheduler    *Scheduler
 }
 
 type WorkerConfig struct {
@@ -167,4 +168,8 @@ func (w *WorkerManager) addWorker(rootPath string, generationPeriod int, ignoreP
 		return nil, err
 	}
 	return worker, nil
+}
+
+func (w *WorkerManager) scheduleWork(workerID string, task func() error) {
+	//TODO integrate scheduler
 }
