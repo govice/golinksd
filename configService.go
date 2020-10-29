@@ -50,6 +50,7 @@ func (cs *ConfigService) setupConfig() error {
 	viper.SetDefault("delay_startup", 0)
 	viper.SetDefault("templates_home", "./templates")
 	viper.SetDefault("tracking_period", 30000)
+	viper.SetDefault("concurrent_task_limit", 3)
 
 	viper.AddConfigPath(daemonHome)
 

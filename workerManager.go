@@ -9,6 +9,7 @@ import (
 	"path/filepath"
 	"sync"
 
+	"github.com/spf13/viper"
 	"golang.org/x/sync/errgroup"
 )
 
@@ -18,6 +19,7 @@ type WorkerManager struct {
 	WorkerConfig *WorkerConfig
 	ctx          context.Context
 	mu           *sync.Mutex
+	scheduler    *Scheduler
 }
 
 type WorkerConfig struct {
@@ -29,8 +31,13 @@ func (wc *WorkerConfig) Length() int {
 }
 
 func NewWorkerManager(daemon *daemon) (*WorkerManager, error) {
+	s, err := NewScheduler(viper.GetInt("concurrent_task_limit"))
+	if err != nil {
+		return nil, err
+	}
 	m := &WorkerManager{daemon: daemon,
-		mu: &sync.Mutex{},
+		mu:        &sync.Mutex{},
+		scheduler: s,
 	}
 
 	workerConfig, err := m.loadWorkerConfig()
@@ -96,6 +103,8 @@ func (w *WorkerManager) Execute(ctx context.Context) error {
 	if err := w.startWorkers(ctx); err != nil {
 		return err
 	}
+
+	go w.scheduler.Run(w.ctx)
 
 	for {
 		select {
@@ -167,4 +176,8 @@ func (w *WorkerManager) addWorker(rootPath string, generationPeriod int, ignoreP
 		return nil, err
 	}
 	return worker, nil
+}
+
+func (w *WorkerManager) scheduleWork(workerID string, task func() error) error {
+	return w.scheduler.Schedule(workerID, task)
 }

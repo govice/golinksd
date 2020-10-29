@@ -39,30 +39,40 @@ func (w *Worker) Execute(ctx context.Context) error {
 	}
 
 	w.logger.Println("starting worker:", w.RootPath)
-	w.logger.Println("generating startup blockmap")
-	if err := w.generateAndUploadBlockmap(); err != nil {
-		w.logger.Println("initial blockmap generation failed", err)
+	generationTicker := time.NewTicker(time.Duration(w.GenerationPeriod) * time.Millisecond)
+	schedulerFunc := func() {
+		if err := w.daemon.workerManager.scheduleWork(w.id, func() error {
+			berr := w.generateAndUploadBlockmap()
+			logln(w.id, "resetting generation ticker...")
+			generationTicker.Reset(time.Duration(w.GenerationPeriod))
+			return berr
+		}); errors.Is(err, ErrTaskScheduled) {
+			logln(w.id, "task already scheduled. waiting until next epoch...")
+			generationTicker.Reset(time.Duration(w.GenerationPeriod))
+		} else if err != nil {
+			errln(w.id, err)
+			generationTicker.Reset(time.Duration(w.GenerationPeriod))
+		}
 	}
+
+	w.logger.Println("scheduling startup blockmap")
+	generationTicker.Stop()
+	schedulerFunc()
 
 	w.logger.Println("scheduling periodic blockmap generation")
 	w.logger.Println("generation_period:", w.GenerationPeriod, "ms")
-	generationTicker := time.NewTicker(time.Duration(w.GenerationPeriod) * time.Millisecond)
+
 	for {
 		select {
 		case <-ctx.Done():
 			w.logger.Println("received termination on worker context")
 			generationTicker.Stop()
+			schedulerFunc()
 			return nil //TODO err canceled?
 		case <-generationTicker.C:
 			w.logger.Println("generating scheduled blockmap for tick")
-			if err := w.generateAndUploadBlockmap(); err != nil {
-				w.logger.Println("scheduled blockmap generation failed. Retrying...")
-				generationTicker.Stop()
-				if err := w.generateAndUploadBlockmap(); err != nil {
-					w.logger.Println("blockmap generation and upload failed")
-				}
-				generationTicker.Reset(time.Duration(w.GenerationPeriod))
-			}
+			generationTicker.Stop()
+
 		}
 	}
 }
