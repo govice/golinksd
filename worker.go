@@ -11,6 +11,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/govice/golinks-daemon/pkg/scheduler"
 	"github.com/govice/golinks/block"
 	"github.com/govice/golinks/blockchain"
 	"github.com/govice/golinks/blockmap"
@@ -46,7 +47,7 @@ func (w *Worker) Execute(ctx context.Context) error {
 			logln(w.id, "resetting generation ticker...")
 			generationTicker.Reset(time.Duration(w.GenerationPeriod))
 			return berr
-		}); errors.Is(err, ErrTaskScheduled) {
+		}); errors.Is(err, scheduler.ErrTaskScheduled) {
 			logln(w.id, "task already scheduled. waiting until next epoch...")
 			generationTicker.Reset(time.Duration(w.GenerationPeriod))
 		} else if err != nil {

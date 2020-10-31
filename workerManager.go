@@ -9,6 +9,7 @@ import (
 	"path/filepath"
 	"sync"
 
+	"github.com/govice/golinks-daemon/pkg/scheduler"
 	"github.com/spf13/viper"
 	"golang.org/x/sync/errgroup"
 )
@@ -19,7 +20,7 @@ type WorkerManager struct {
 	WorkerConfig *WorkerConfig
 	ctx          context.Context
 	mu           *sync.Mutex
-	scheduler    *Scheduler
+	scheduler    *scheduler.Scheduler
 }
 
 type WorkerConfig struct {
@@ -31,7 +32,7 @@ func (wc *WorkerConfig) Length() int {
 }
 
 func NewWorkerManager(daemon *daemon) (*WorkerManager, error) {
-	s, err := NewScheduler(viper.GetInt("concurrent_task_limit"))
+	s, err := scheduler.New(viper.GetInt("concurrent_task_limit"))
 	if err != nil {
 		return nil, err
 	}
@@ -179,5 +180,22 @@ func (w *WorkerManager) addWorker(rootPath string, generationPeriod int, ignoreP
 }
 
 func (w *WorkerManager) scheduleWork(workerID string, task func() error) error {
-	return w.scheduler.Schedule(workerID, task)
+	t := &WorkerTask{
+		id:   workerID,
+		work: task,
+	}
+	return w.scheduler.Schedule(t)
+}
+
+type WorkerTask struct {
+	id   string
+	work func() error
+}
+
+func (wt *WorkerTask) ID() string {
+	return wt.id
+}
+
+func (wt *WorkerTask) Work() func() error {
+	return wt.work
 }
