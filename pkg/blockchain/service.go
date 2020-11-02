@@ -1,4 +1,4 @@
-package main
+package blockchain
 
 import (
 	"encoding/json"
@@ -9,21 +9,16 @@ import (
 	"github.com/govice/golinks/blockchain"
 )
 
-type BlockchainService struct {
-	mutex  sync.Mutex
-	chain  *blockchain.Blockchain
-	daemon *daemon
+type Service struct {
+	mutex sync.Mutex
+	chain *blockchain.Blockchain
 }
 
-func NewBlockchainService(daemon *daemon) (*BlockchainService, error) {
-	bs := &BlockchainService{
-		daemon: daemon,
-	}
-
-	return bs, nil
+func New() (*Service, error) {
+	return &Service{}, nil
 }
 
-func (service *BlockchainService) addBlock(content []byte) (*block.Block, error) {
+func (service *Service) AddBlock(content []byte) (*block.Block, error) {
 	service.mutex.Lock()
 	defer service.mutex.Unlock()
 	service.chain.AddSHA512(content)
@@ -31,7 +26,7 @@ func (service *BlockchainService) addBlock(content []byte) (*block.Block, error)
 	return block, nil
 }
 
-func (service *BlockchainService) resetChain() error {
+func (service *Service) ResetChain() error {
 	genesis := block.NewSHA512Genesis()
 	service.mutex.Lock()
 	defer service.mutex.Unlock()
@@ -44,7 +39,7 @@ func (service *BlockchainService) resetChain() error {
 	return nil
 }
 
-func (service *BlockchainService) GCI(other *blockchain.Blockchain) (int, error) {
+func (service *Service) GCI(other *blockchain.Blockchain) (int, error) {
 	service.mutex.Lock()
 	defer service.mutex.Unlock()
 	gci, err := service.chain.GetGCI(other)
@@ -55,21 +50,21 @@ func (service *BlockchainService) GCI(other *blockchain.Blockchain) (int, error)
 	return gci, nil
 }
 
-func (service *BlockchainService) ChainLength() int {
+func (service *Service) ChainLength() int {
 	service.mutex.Lock()
 	defer service.mutex.Unlock()
 	return service.chain.Length()
 }
 
-func (service *BlockchainService) lock() {
+func (service *Service) lock() {
 	service.mutex.Lock()
 }
 
-func (service *BlockchainService) unlock() {
+func (service *Service) unlock() {
 	service.mutex.Unlock()
 }
 
-func (service *BlockchainService) UpdateChain(other *blockchain.Blockchain) error {
+func (service *Service) UpdateChain(other *blockchain.Blockchain) error {
 	service.lock()
 	defer service.unlock()
 	newChain, err := blockchain.UpdateChain(service.chain, other)
@@ -81,7 +76,7 @@ func (service *BlockchainService) UpdateChain(other *blockchain.Blockchain) erro
 	return nil
 }
 
-func (service *BlockchainService) ChainJSON() ([]byte, error) {
+func (service *Service) ChainJSON() ([]byte, error) {
 	service.lock()
 	defer service.unlock()
 
@@ -96,7 +91,7 @@ func (service *BlockchainService) ChainJSON() ([]byte, error) {
 var ErrBlockNotFound = errors.New("blockchainService: block not found")
 
 // FindBlockByIndex searches for a block by index
-func (service *BlockchainService) FindBlockByIndex(index int) (*block.Block, error) {
+func (service *Service) FindBlockByIndex(index int) (*block.Block, error) {
 	service.lock()
 	defer service.unlock()
 
@@ -109,7 +104,7 @@ func (service *BlockchainService) FindBlockByIndex(index int) (*block.Block, err
 }
 
 // FindBlockByHash searches for a block by hash
-func (service *BlockchainService) FindBlockByHash(hash []byte) (*block.Block, error) {
+func (service *Service) FindBlockByHash(hash []byte) (*block.Block, error) {
 	service.lock()
 	defer service.unlock()
 
@@ -122,7 +117,7 @@ func (service *BlockchainService) FindBlockByHash(hash []byte) (*block.Block, er
 }
 
 //FindBlockByParentHash searches for a block by parent hash
-func (service *BlockchainService) FindBlockByParentHash(hash []byte) (*block.Block, error) {
+func (service *Service) FindBlockByParentHash(hash []byte) (*block.Block, error) {
 	service.lock()
 	defer service.unlock()
 
@@ -135,7 +130,7 @@ func (service *BlockchainService) FindBlockByParentHash(hash []byte) (*block.Blo
 }
 
 // FindBlockByTimestamp searches for a block by timestamp
-func (service *BlockchainService) FindBlockByTimestamp(timestamp int64) (*block.Block, error) {
+func (service *Service) FindBlockByTimestamp(timestamp int64) (*block.Block, error) {
 	service.lock()
 	defer service.unlock()
 
@@ -147,7 +142,7 @@ func (service *BlockchainService) FindBlockByTimestamp(timestamp int64) (*block.
 	return block, nil
 }
 
-func (service *BlockchainService) Chain() *blockchain.Blockchain {
+func (service *Service) Chain() *blockchain.Blockchain {
 	service.lock()
 	defer service.unlock()
 

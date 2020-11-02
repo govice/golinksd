@@ -1,4 +1,4 @@
-package main
+package golinks
 
 import (
 	"bytes"
@@ -8,27 +8,32 @@ import (
 	"net/http"
 	"strconv"
 
+	"github.com/govice/golinks-daemon/pkg/log"
 	"github.com/govice/golinks/block"
 	"github.com/spf13/viper"
 )
 
-type GolinksService struct {
-	daemon *daemon
+type Service struct {
+	tokener Tokener
 }
 
-func NewGolinksService(daemon *daemon) (*GolinksService, error) {
-	return &GolinksService{
-		daemon: daemon,
+type Tokener interface {
+	Token() string
+}
+
+func New(tokener Tokener) (*Service, error) {
+	return &Service{
+		tokener: tokener,
 	}, nil
 }
 
-func (gs *GolinksService) BearerToken() string {
-	return "Bearer " + gs.daemon.configService.token.Token
+func (gs *Service) BearerToken() string {
+	return "Bearer " + gs.tokener.Token()
 }
 
 var ErrFailedChainLengthRequest = errors.New("failed to request chain length from remote")
 
-func (gs *GolinksService) GetLength() (int, error) {
+func (gs *Service) GetLength() (int, error) {
 	req, err := http.NewRequest("GET", viper.GetString("chain_length_endpoint"), nil)
 	if err != nil {
 		return -1, err
@@ -38,7 +43,7 @@ func (gs *GolinksService) GetLength() (int, error) {
 
 	res, err := http.DefaultClient.Do(req)
 	if err != nil {
-		errln("failed to get length", err)
+		log.Errln("failed to get length", err)
 		return -1, err
 	}
 
@@ -63,7 +68,7 @@ func (gs *GolinksService) GetLength() (int, error) {
 	return payload.Length, nil
 }
 
-func (gs *GolinksService) GetBlock(index int) (*block.Block, error) {
+func (gs *Service) GetBlock(index int) (*block.Block, error) {
 	req, err := http.NewRequest("GET", viper.GetString("chain_block_endpoint"), nil)
 	if err != nil {
 		return nil, err
@@ -77,7 +82,7 @@ func (gs *GolinksService) GetBlock(index int) (*block.Block, error) {
 
 	res, err := http.DefaultClient.Do(req)
 	if err != nil {
-		errln("failed to get block")
+		log.Errln("failed to get block")
 		return nil, err
 	}
 
@@ -97,7 +102,7 @@ func (gs *GolinksService) GetBlock(index int) (*block.Block, error) {
 
 var ErrFailedBlockUpload = errors.New("failed to upload block")
 
-func (gs *GolinksService) UploadBlock(blk *block.Block) error {
+func (gs *Service) UploadBlock(blk *block.Block) error {
 	blockBytes, err := json.Marshal(blk)
 	if err != nil {
 		return err

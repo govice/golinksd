@@ -1,4 +1,4 @@
-package main
+package authentication
 
 import (
 	"bytes"
@@ -8,18 +8,19 @@ import (
 	"github.com/spf13/viper"
 )
 
-type AuthenticationService struct {
-	daemon *daemon
+type Service struct{}
+
+type ExternalUserAuth struct {
+	Token string `json:"token"`
+	Email string `json:"email"`
 }
 
-func NewAuthenticationService(daemon *daemon) (*AuthenticationService, error) {
-	as := &AuthenticationService{
-		daemon: daemon,
-	}
+func New() (*Service, error) {
+	as := &Service{}
 	return as, nil
 }
 
-func (service *AuthenticationService) valid(userAuth *externalUserAuth) (bool, error) {
+func (service *Service) Valid(userAuth *ExternalUserAuth) (bool, error) {
 	authServerURI := viper.GetString("auth_server")
 	authJSON, err := json.Marshal(userAuth)
 	if err != nil {
@@ -36,9 +37,4 @@ func (service *AuthenticationService) valid(userAuth *externalUserAuth) (bool, e
 		return true, nil
 	}
 	return false, nil
-}
-
-type externalUserAuth struct {
-	Token string `json:"token"`
-	Email string `json:"email"`
 }

@@ -1,16 +1,17 @@
-package main
+package worker
 
 import (
 	"context"
 	"encoding/json"
 	"errors"
 	"io"
-	"log"
+	glog "log"
 	"os"
 	"path/filepath"
 	"sync"
 	"time"
 
+	"github.com/govice/golinks-daemon/pkg/log"
 	"github.com/govice/golinks-daemon/pkg/scheduler"
 	"github.com/govice/golinks/block"
 	"github.com/govice/golinks/blockchain"
@@ -19,15 +20,20 @@ import (
 )
 
 type Worker struct {
-	daemon           *daemon
+	// workerService    *Service
 	cancelFunc       context.CancelFunc
 	RootPath         string   `json:"root_path"`
 	GenerationPeriod int      `json:"generation_period"`
 	IgnorePaths      []string `json:"ignore_paths"`
 	running          bool
 	id               string
-	logger           *log.Logger
+	logger           *glog.Logger
+	servicer         Servicer
 }
+
+// type Scheduler interface {
+// 	Schedule(id string, task func() error) error
+// }
 
 var ErrBadRootPath = errors.New("bad root_path")
 
@@ -35,23 +41,23 @@ func (w *Worker) Execute(ctx context.Context) error {
 	// TODO pull this from its own config file(s)
 	fi, err := os.Stat(w.RootPath)
 	if err != nil || !fi.IsDir() {
-		logln(err)
+		log.Logln(err)
 		return ErrBadRootPath
 	}
 
 	w.logger.Println("starting worker:", w.RootPath)
 	generationTicker := time.NewTicker(time.Duration(w.GenerationPeriod) * time.Millisecond)
 	schedulerFunc := func() {
-		if err := w.daemon.workerManager.scheduleWork(w.id, func() error {
+		if err := w.servicer.WorkerService().ScheduleWork(w.id, func() error {
 			berr := w.generateAndUploadBlockmap()
-			logln(w.id, "resetting generation ticker...")
+			log.Logln(w.id, "resetting generation ticker...")
 			generationTicker.Reset(time.Duration(w.GenerationPeriod))
 			return berr
 		}); errors.Is(err, scheduler.ErrTaskScheduled) {
-			logln(w.id, "task already scheduled. waiting until next epoch...")
+			log.Logln(w.id, "task already scheduled. waiting until next epoch...")
 			generationTicker.Reset(time.Duration(w.GenerationPeriod))
 		} else if err != nil {
-			errln(w.id, err)
+			log.Errln(w.id, err)
 			generationTicker.Reset(time.Duration(w.GenerationPeriod))
 		}
 	}
@@ -101,10 +107,10 @@ func (w *Worker) generateAndUploadBlockmap() error {
 	w.logger.Println("sending force sync to chain tracker")
 	var wg sync.WaitGroup
 	wg.Add(1)
-	w.daemon.chainTracker.forceSyncChan <- &wg
+	w.servicer.ChainTrackerService().ForceSync(&wg)
 	wg.Wait()
 
-	localHeadBlock, err := w.daemon.chainTracker.LocalHead()
+	localHeadBlock, err := w.servicer.ChainTrackerService().LocalHead()
 	if err != nil {
 		w.logger.Println("failed to get local head block", err)
 		return err
@@ -130,16 +136,16 @@ func (w *Worker) generateAndUploadBlockmap() error {
 }
 
 func (w *Worker) uploadBlock(blk *block.Block) error {
-	return w.daemon.golinksService.UploadBlock(blk)
+	return w.servicer.GolinksService().UploadBlock(blk)
 }
 
 func (w *Worker) logln(v ...interface{}) {
 	w.logger.Println(v...)
 }
 
-func NewWorker(daemon *daemon, rootPath string, generationPeriod int, ignorePaths []string) (*Worker, error) {
+func NewWorker(servicer Servicer, rootPath string, generationPeriod int, ignorePaths []string) (*Worker, error) {
 	workerID := xid.NewWithTime(time.Now()).String()
-	workerLogsDir := filepath.Join(daemon.configService.HomeDir(), "logs")
+	workerLogsDir := filepath.Join(servicer.ConfigService().HomeDir(), "logs")
 	os.Mkdir(workerLogsDir, os.ModePerm)
 	logFilePath := filepath.Join(workerLogsDir, workerID+".log")
 	f, err := os.OpenFile(logFilePath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
@@ -148,12 +154,12 @@ func NewWorker(daemon *daemon, rootPath string, generationPeriod int, ignorePath
 	}
 
 	worker := &Worker{
-		daemon:           daemon,
 		RootPath:         rootPath,
 		GenerationPeriod: generationPeriod,
-		logger:           log.New(io.MultiWriter(f, os.Stderr), workerID+" ", log.Ltime),
+		logger:           glog.New(io.MultiWriter(f, os.Stderr), workerID+" ", glog.Ltime),
 		id:               workerID,
 		IgnorePaths:      ignorePaths,
+		servicer:         servicer,
 	}
 
 	worker.AddCancelFunc(func() {

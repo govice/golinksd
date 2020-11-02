@@ -1,11 +1,11 @@
-package main
+package webserver
 
 import (
-	"log"
 	"net/http"
 	"strconv"
 
 	"github.com/gin-gonic/gin"
+	"github.com/govice/golinks-daemon/pkg/log"
 )
 
 func (w *Webserver) registerConsoleHandlers() error {
@@ -32,7 +32,7 @@ func (w *Webserver) registerConsoleHandlers() error {
 			},
 		}
 
-		for index, worker := range w.daemon.workerManager.WorkerConfig.Workers {
+		for index, worker := range w.servicer.WorkerService().WorkerConfig.Workers {
 			option := &CardOption{
 				Label: worker.RootPath,
 				URL:   "/console/worker/view/" + strconv.Itoa(index),
@@ -76,7 +76,7 @@ func (w *Webserver) registerConsoleHandlers() error {
 		formContent := c.PostForm("blockContentTextArea")
 		log.Println(formContent)
 		if len(formContent) > 0 {
-			if _, err := w.blockchainService.addBlock([]byte(formContent)); err != nil {
+			if _, err := w.servicer.BlockchainService().AddBlock([]byte(formContent)); err != nil {
 				c.Redirect(http.StatusSeeOther, "/error")
 				return
 			}
@@ -85,7 +85,7 @@ func (w *Webserver) registerConsoleHandlers() error {
 	})
 
 	router.GET("/console/getChain", func(c *gin.Context) {
-		c.JSON(http.StatusOK, w.blockchainService.chain)
+		c.JSON(http.StatusOK, w.servicer.BlockchainService().Chain())
 	})
 
 	router.GET("console/deleteChain", func(c *gin.Context) {
@@ -96,14 +96,14 @@ func (w *Webserver) registerConsoleHandlers() error {
 	})
 
 	router.POST("console/deleteChain", func(c *gin.Context) {
-		w.blockchainService.resetChain()
+		w.servicer.BlockchainService().ResetChain()
 		c.Redirect(http.StatusSeeOther, "/console")
 	})
 
 	router.GET("console/worker/view/:id", func(c *gin.Context) {
 		idStr, ok := c.Params.Get("id")
 		if !ok {
-			logln("invalid worker id:", idStr)
+			log.Logln("invalid worker id:", idStr)
 			c.AbortWithStatus(http.StatusBadRequest)
 			return
 		}
@@ -114,7 +114,7 @@ func (w *Webserver) registerConsoleHandlers() error {
 			return
 		}
 
-		worker, err := w.workerService.getWorkerByIndex(id)
+		worker, err := w.servicer.WorkerService().GetWorkerByIndex(id)
 		if err != nil {
 			c.AbortWithStatus(http.StatusBadRequest)
 			return
@@ -131,7 +131,7 @@ func (w *Webserver) registerConsoleHandlers() error {
 	router.POST("console/worker/delete/:id", func(c *gin.Context) {
 		idStr, ok := c.Params.Get("id")
 		if !ok {
-			logln("invalid worker id:", idStr)
+			log.Logln("invalid worker id:", idStr)
 			c.AbortWithStatus(http.StatusBadRequest)
 			return
 		}
@@ -142,8 +142,8 @@ func (w *Webserver) registerConsoleHandlers() error {
 			return
 		}
 
-		if err := w.workerService.deleteWorkerByIndex(id); err != nil {
-			logln(err)
+		if err := w.servicer.WorkerService().DeleteWorkerByIndex(id); err != nil {
+			log.Logln(err)
 			c.AbortWithStatus(http.StatusBadRequest)
 			return
 		}
@@ -175,7 +175,7 @@ func (w *Webserver) registerConsoleHandlers() error {
 		}
 
 		//TODO IGNORE PATHS
-		if err := w.workerService.addWorker(rootPath, generationPeriod, nil); err != nil {
+		if err := w.servicer.WorkerService().AddWorker(rootPath, generationPeriod, nil); err != nil {
 			c.AbortWithError(http.StatusInternalServerError, err)
 			return
 		}
@@ -185,4 +185,23 @@ func (w *Webserver) registerConsoleHandlers() error {
 
 	return nil
 
+}
+
+//CardOption is used in templating to display options in a ConsoleCard
+type CardOption struct {
+	Label string `json:"label"`
+	URL   string `json:"URL"`
+}
+
+type CardButton struct {
+	Label string
+	URL   string
+	Class string
+}
+
+//ConsoleCard is in templating to display a card on the console
+type ConsoleCard struct {
+	Title   string        `json:"title"`
+	Options []*CardOption `json:"options"`
+	Buttons []*CardButton `json:"buttons"`
 }
