@@ -1,4 +1,4 @@
-package main
+package webserver
 
 import (
 	"encoding/base64"
@@ -8,17 +8,18 @@ import (
 	"strconv"
 
 	"github.com/gin-gonic/gin"
+	"github.com/govice/golinks-daemon/pkg/webserver/authentication"
 	"github.com/govice/golinks/block"
 )
 
 func (w *Webserver) externalAuthenticator() gin.HandlerFunc {
 	return func(c *gin.Context) {
-		userAuth := &externalUserAuth{
+		userAuth := &authentication.ExternalUserAuth{
 			Token: c.Query("token"),
 			Email: c.Query("email"),
 		}
 
-		ok, err := w.authService.valid(userAuth)
+		ok, err := w.servicer.AuthenticationService().Valid(userAuth)
 		if (err == nil) && ok {
 			c.Next()
 			return
@@ -46,7 +47,7 @@ func (w *Webserver) postBlockEndpoint(c *gin.Context) {
 		return
 	}
 
-	block, err := w.blockchainService.addBlock([]byte(data.Data))
+	block, err := w.servicer.BlockchainService().AddBlock([]byte(data.Data))
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"status": "error adding block to chain",
@@ -72,19 +73,19 @@ func (w *Webserver) findBlockEndpoint(c *gin.Context) {
 	switch finder.Format {
 	case "index":
 		index, _ := strconv.Atoi(finder.Key)
-		block, _ = w.blockchainService.FindBlockByIndex(index)
+		block, _ = w.servicer.BlockchainService().FindBlockByIndex(index)
 		break
 	case "hash":
 		hash, _ := base64.StdEncoding.DecodeString(finder.Key)
-		block, _ = w.blockchainService.FindBlockByHash(hash)
+		block, _ = w.servicer.BlockchainService().FindBlockByHash(hash)
 		break
 	case "parent_hash":
 		parentHash, _ := base64.StdEncoding.DecodeString(finder.Key)
-		block, _ = w.blockchainService.FindBlockByParentHash(parentHash)
+		block, _ = w.servicer.BlockchainService().FindBlockByParentHash(parentHash)
 		break
 	case "timestamp":
 		timestamp, _ := strconv.ParseInt(finder.Key, 10, 64)
-		block, _ = w.blockchainService.FindBlockByTimestamp(timestamp)
+		block, _ = w.servicer.BlockchainService().FindBlockByTimestamp(timestamp)
 		break
 	}
 
@@ -98,7 +99,7 @@ func (w *Webserver) findBlockEndpoint(c *gin.Context) {
 }
 
 func (w *Webserver) getChainEndpoint(c *gin.Context) {
-	c.PureJSON(http.StatusOK, w.blockchainService.Chain())
+	c.PureJSON(http.StatusOK, w.servicer.BlockchainService().Chain())
 }
 
 type blockchainSearch struct {

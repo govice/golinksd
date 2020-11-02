@@ -1,4 +1,4 @@
-package main
+package config
 
 import (
 	"bytes"
@@ -10,19 +10,21 @@ import (
 	"path/filepath"
 
 	"github.com/gin-gonic/gin"
+	"github.com/govice/golinks-daemon/pkg/log"
 	"github.com/manifoldco/promptui"
 	"github.com/spf13/viper"
 )
 
-type ConfigService struct {
-	daemon *daemon
-	token  *JWT
+type Service struct {
+	token *JWT
 }
 
-func NewConfigService(daemon *daemon) (*ConfigService, error) {
-	cs := &ConfigService{
-		daemon: daemon,
-	}
+type JWT struct {
+	Token string `json:"token"`
+}
+
+func New() (*Service, error) {
+	cs := &Service{}
 	if err := cs.setupConfig(); err != nil {
 		return nil, err
 	}
@@ -34,7 +36,7 @@ func NewConfigService(daemon *daemon) (*ConfigService, error) {
 	return cs, nil
 }
 
-func (cs *ConfigService) setupConfig() error {
+func (cs *Service) setupConfig() error {
 	daemonHome := cs.HomeDir()
 
 	os.Mkdir(daemonHome, os.ModePerm)
@@ -54,7 +56,7 @@ func (cs *ConfigService) setupConfig() error {
 
 	viper.AddConfigPath(daemonHome)
 
-	logln("reading config")
+	log.Logln("reading config")
 
 	err := viper.ReadInConfig()
 	if _, ok := err.(viper.ConfigFileNotFoundError); ok {
@@ -62,9 +64,9 @@ func (cs *ConfigService) setupConfig() error {
 		if _, err := os.Create(configFile); err != nil {
 			return err
 		}
-		logln("creating new config file")
+		log.Logln("creating new config file")
 		if err := viper.WriteConfig(); err != nil {
-			logln("failed to write new config file")
+			log.Logln("failed to write new config file")
 			return err
 		}
 	}
@@ -73,16 +75,14 @@ func (cs *ConfigService) setupConfig() error {
 	return nil
 }
 
-var ErrInvalidLedger = errors.New("failed to load ledger from config")
-
-func (cs *ConfigService) HomeDir() string {
+func (cs *Service) HomeDir() string {
 	homeDir, _ := os.UserHomeDir()
 	return filepath.Join(homeDir, ".golinksd")
 }
 
 var ErrNotAuthorized = errors.New("Not Authorized.")
 
-func (cs *ConfigService) checkLogin() error {
+func (cs *Service) checkLogin() error {
 	tokenPath := filepath.Join(cs.HomeDir(), "credentials.json")
 	if _, err := os.Stat(tokenPath); errors.Is(err, os.ErrNotExist) {
 		email, eok := os.LookupEnv("GOLINKSD_USER")
@@ -92,38 +92,38 @@ func (cs *ConfigService) checkLogin() error {
 		if eok && pok {
 			token, err = cs.authenticate(email, password)
 			if err != nil {
-				errln(err)
+				log.Errln(err)
 				return ErrNotAuthorized
 			}
 
 		} else {
 			token, err = cs.promptLogin()
 			if err != nil {
-				errln("failed to prompt login:", err)
+				log.Errln("failed to prompt login:", err)
 				return ErrNotAuthorized
 			}
 		}
 		tokenBytes, err := json.Marshal(token)
 		if err != nil {
-			errln("failed marshal token:", err)
+			log.Errln("failed marshal token:", err)
 			return err
 		}
 
 		if err := ioutil.WriteFile(tokenPath, tokenBytes, os.ModePerm); err != nil {
-			errln("failed to write credentials file:", err)
+			log.Errln("failed to write credentials file:", err)
 			return err
 		}
 		cs.token = token
 	} else {
 		tokenBytes, err := ioutil.ReadFile(tokenPath)
 		if err != nil {
-			errln("failed to read token file", err)
+			log.Errln("failed to read token file", err)
 			return err
 		}
 
 		token := &JWT{}
 		if err := json.Unmarshal(tokenBytes, token); err != nil {
-			errln("failed to unmarshal token", err)
+			log.Errln("failed to unmarshal token", err)
 			return err
 		}
 		cs.token = token
@@ -131,7 +131,7 @@ func (cs *ConfigService) checkLogin() error {
 	return nil
 }
 
-func (cs *ConfigService) promptLogin() (*JWT, error) {
+func (cs *Service) promptLogin() (*JWT, error) {
 	promptEmail := promptui.Prompt{
 		Label: "Email",
 	}
@@ -142,13 +142,13 @@ func (cs *ConfigService) promptLogin() (*JWT, error) {
 
 	email, err := promptEmail.Run()
 	if err != nil {
-		errln("failed to prompt email")
+		log.Errln("failed to prompt email")
 		return nil, err
 	}
 
 	password, err := promptPassword.Run()
 	if err != nil {
-		errln("failed to prompt password")
+		log.Errln("failed to prompt password")
 		return nil, err
 	}
 
@@ -157,7 +157,7 @@ func (cs *ConfigService) promptLogin() (*JWT, error) {
 
 var ErrFailedAuthentication = errors.New(("failed to authenticate"))
 
-func (cs *ConfigService) authenticate(email, password string) (*JWT, error) {
+func (cs *Service) authenticate(email, password string) (*JWT, error) {
 	loginPayload, err := json.Marshal(gin.H{
 		"email":    email,
 		"password": password,
@@ -182,7 +182,7 @@ func (cs *ConfigService) authenticate(email, password string) (*JWT, error) {
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		errln("failed to authorize:", string(respBody))
+		log.Errln("failed to authorize:", string(respBody))
 		return nil, ErrFailedAuthentication
 	}
 
@@ -192,9 +192,8 @@ func (cs *ConfigService) authenticate(email, password string) (*JWT, error) {
 	}
 
 	return token, nil
-
 }
 
-type JWT struct {
-	Token string `json:"token"`
+func (cs *Service) Token() string {
+	return cs.token.Token
 }
