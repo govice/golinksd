@@ -3,13 +3,13 @@ package daemon
 import (
 	"context"
 
+	"github.com/govice/golinks-daemon/internal/webserver"
+	"github.com/govice/golinks-daemon/pkg/authentication"
 	"github.com/govice/golinks-daemon/pkg/blockchain"
 	"github.com/govice/golinks-daemon/pkg/chaintracker"
 	"github.com/govice/golinks-daemon/pkg/config"
 	"github.com/govice/golinks-daemon/pkg/golinks"
 	"github.com/govice/golinks-daemon/pkg/log"
-	"github.com/govice/golinks-daemon/pkg/webserver"
-	"github.com/govice/golinks-daemon/pkg/webserver/authentication"
 	"github.com/govice/golinks-daemon/pkg/worker"
 	"github.com/kardianos/service"
 	"github.com/spf13/viper"
