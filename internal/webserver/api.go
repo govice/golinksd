@@ -8,7 +8,7 @@ import (
 	"strconv"
 
 	"github.com/gin-gonic/gin"
-	"github.com/govice/golinks-daemon/pkg/webserver/authentication"
+	"github.com/govice/golinks-daemon/pkg/authentication"
 	"github.com/govice/golinks/block"
 )
 
