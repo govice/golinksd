@@ -19,6 +19,7 @@ type Scheduler struct {
 	id    string
 	queue []Task
 	sem   chan struct{}
+	mu    sync.Mutex
 }
 
 func New(concurrencyCeiling int) (*Scheduler, error) {
@@ -31,6 +32,7 @@ func New(concurrencyCeiling int) (*Scheduler, error) {
 var ErrTaskScheduled = errors.New("ErrTaskScheduled: task already scheduled")
 
 func (s *Scheduler) Schedule(task Task) error {
+	s.mu.Lock()
 	for _, t := range s.queue {
 		if t.ID() == task.ID() {
 			return ErrTaskScheduled
@@ -38,6 +40,7 @@ func (s *Scheduler) Schedule(task Task) error {
 	}
 
 	s.queue = append(s.queue, task)
+	s.mu.Unlock()
 
 	return nil
 }
@@ -51,18 +54,24 @@ func (s *Scheduler) Run(c context.Context) {
 	}()
 
 	for {
-		var t Task
 		if len(s.queue) == 0 {
-			time.Sleep(time.Second * 1)
+			// log.Logln("scheduler queue empty...")
+			time.Sleep(1 * time.Second)
 			continue
-		} else if len(s.queue) > 1 {
-			t, s.queue = s.queue[0], s.queue[1:]
-		} else {
-			t, s.queue = s.queue[0], nil
 		}
-
 		select {
 		case s.sem <- struct{}{}:
+			var t Task
+			if len(s.queue) > 1 {
+				s.mu.Lock()
+				t, s.queue = s.queue[0], s.queue[1:]
+				s.mu.Unlock()
+			} else if len(s.queue) == 1 {
+				s.mu.Lock()
+				t, s.queue = s.queue[0], nil
+				s.mu.Unlock()
+			}
+
 			wg.Add(1)
 			go func() {
 				log.Logln(t.ID(), "executing...")

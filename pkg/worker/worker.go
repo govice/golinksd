@@ -46,24 +46,26 @@ func (w *Worker) Execute(ctx context.Context) error {
 	}
 
 	w.logger.Println("starting worker:", w.RootPath)
-	generationTicker := time.NewTicker(time.Duration(w.GenerationPeriod) * time.Millisecond)
+	genDuration := time.Duration(w.GenerationPeriod) * time.Millisecond
+	generationTicker := time.NewTicker(genDuration)
 	schedulerFunc := func() {
+		generationTicker.Stop()
 		if err := w.servicer.WorkerService().ScheduleWork(w.id, func() error {
 			berr := w.generateAndUploadBlockmap()
 			log.Logln(w.id, "resetting generation ticker...")
-			generationTicker.Reset(time.Duration(w.GenerationPeriod))
+			generationTicker.Reset(genDuration)
 			return berr
 		}); errors.Is(err, scheduler.ErrTaskScheduled) {
 			log.Logln(w.id, "task already scheduled. waiting until next epoch...")
-			generationTicker.Reset(time.Duration(w.GenerationPeriod))
+			generationTicker.Reset(genDuration)
 		} else if err != nil {
 			log.Errln(w.id, err)
-			generationTicker.Reset(time.Duration(w.GenerationPeriod))
+			generationTicker.Reset(genDuration)
 		}
+		w.logger.Println(w.id, "finished scheduled generation epoch")
 	}
 
 	w.logger.Println("scheduling startup blockmap")
-	generationTicker.Stop()
 	schedulerFunc()
 
 	w.logger.Println("scheduling periodic blockmap generation")
@@ -74,12 +76,10 @@ func (w *Worker) Execute(ctx context.Context) error {
 		case <-ctx.Done():
 			w.logger.Println("received termination on worker context")
 			generationTicker.Stop()
-			schedulerFunc()
 			return nil //TODO err canceled?
 		case <-generationTicker.C:
 			w.logger.Println("generating scheduled blockmap for tick")
-			generationTicker.Stop()
-
+			schedulerFunc()
 		}
 	}
 }
