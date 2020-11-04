@@ -2,6 +2,7 @@ package daemon
 
 import (
 	"context"
+	"sync"
 
 	"github.com/govice/golinks-daemon/internal/webserver"
 	"github.com/govice/golinks-daemon/pkg/authentication"
@@ -97,18 +98,25 @@ func (d *Daemon) run() error {
 		})
 	}
 
+	chainTrackerCtx, cancelChainTracker := context.WithCancel(primaryContext)
+	d.errorGroup.Go(func() error {
+		return d.ExecuteChainTracker(chainTrackerCtx)
+	})
+	d.cancelFuncs = append(d.cancelFuncs, cancelChainTracker)
+
+	var initialSyncWg sync.WaitGroup
+	initialSyncWg.Add(1)
+
+	log.Logln("performing initial chain sync...")
+	d.ChainTrackerService().ForceSync(&initialSyncWg)
+	initialSyncWg.Wait()
+
 	workerCtx, cancelDaemon := context.WithCancel(primaryContext)
 
 	d.errorGroup.Go(func() error {
 		return d.ExecuteWorkerManager(workerCtx)
 	})
 	d.cancelFuncs = append(d.cancelFuncs, cancelDaemon)
-
-	chainTrackerCtx, cancelChainTracker := context.WithCancel(primaryContext)
-	d.errorGroup.Go(func() error {
-		return d.ExecuteChainTracker(chainTrackerCtx)
-	})
-	d.cancelFuncs = append(d.cancelFuncs, cancelChainTracker)
 
 	<-primaryContext.Done()
 	return nil
