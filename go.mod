@@ -1,4 +1,4 @@
-module github.com/govice/golinks-daemon
+module github.com/govice/golinksd
 
 go 1.15
 

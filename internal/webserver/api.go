@@ -8,8 +8,8 @@ import (
 	"strconv"
 
 	"github.com/gin-gonic/gin"
-	"github.com/govice/golinks-daemon/pkg/authentication"
 	"github.com/govice/golinks/block"
+	"github.com/govice/golinksd/pkg/authentication"
 )
 
 func (w *Webserver) externalAuthenticator() gin.HandlerFunc {

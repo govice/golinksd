@@ -9,11 +9,11 @@ import (
 	"path/filepath"
 	"sync"
 
-	"github.com/govice/golinks-daemon/pkg/chaintracker"
-	"github.com/govice/golinks-daemon/pkg/config"
-	"github.com/govice/golinks-daemon/pkg/golinks"
-	"github.com/govice/golinks-daemon/pkg/log"
-	"github.com/govice/golinks-daemon/pkg/scheduler"
+	"github.com/govice/golinksd/pkg/chaintracker"
+	"github.com/govice/golinksd/pkg/config"
+	"github.com/govice/golinksd/pkg/golinks"
+	"github.com/govice/golinksd/pkg/log"
+	"github.com/govice/golinksd/pkg/scheduler"
 	"github.com/spf13/viper"
 	"golang.org/x/sync/errgroup"
 )

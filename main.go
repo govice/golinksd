@@ -1,8 +1,8 @@
 package main
 
 import (
-	"github.com/govice/golinks-daemon/cmd"
-	"github.com/govice/golinks-daemon/pkg/log"
+	"github.com/govice/golinksd/cmd"
+	"github.com/govice/golinksd/pkg/log"
 )
 
 func main() {

@@ -12,10 +12,10 @@ import (
 	"sync"
 	"time"
 
-	"github.com/govice/golinks-daemon/pkg/config"
-	"github.com/govice/golinks-daemon/pkg/golinks"
-	"github.com/govice/golinks-daemon/pkg/log"
 	"github.com/govice/golinks/block"
+	"github.com/govice/golinksd/pkg/config"
+	"github.com/govice/golinksd/pkg/golinks"
+	"github.com/govice/golinksd/pkg/log"
 	"github.com/spf13/viper"
 )
 

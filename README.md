@@ -1,12 +1,12 @@
-# golinks-daemon
-[![govice](https://circleci.com/gh/govice/golinks-daemon.svg?style=svg)](https://circleci.com/gh/govice/golinks-daemon)
+# golinksd
+[![govice](https://circleci.com/gh/govice/golinksd.svg?style=svg)](https://circleci.com/gh/govice/golinksd)
 
 This is the daemon for the GoVice project. This is currently under development, and you should expect breaking changes. The goal of this project is to produce a blockchain-backed merkle tree used to track the integrity of filesystem(s) over time.
 
 ## Usage
 ```
 go install
-golinks-daemon
+golinksd
 ```
 
 ## Configuration
