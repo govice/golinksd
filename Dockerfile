@@ -19,5 +19,5 @@ COPY go.sum .
 COPY ./bin/entrypoint.sh /usr/local/bin
 RUN chmod +x /usr/local/bin/entrypoint.sh
 RUN go install -v .
-CMD ["golinks-daemon"]
+CMD ["golinksd"]
 ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]

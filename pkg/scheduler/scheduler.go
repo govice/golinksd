@@ -6,7 +6,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/govice/golinks-daemon/pkg/log"
+	"github.com/govice/golinksd/pkg/log"
 	"github.com/rs/xid"
 )
 

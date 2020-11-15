@@ -11,11 +11,11 @@ import (
 	"sync"
 	"time"
 
-	"github.com/govice/golinks-daemon/pkg/log"
-	"github.com/govice/golinks-daemon/pkg/scheduler"
 	"github.com/govice/golinks/block"
 	"github.com/govice/golinks/blockchain"
 	"github.com/govice/golinks/blockmap"
+	"github.com/govice/golinksd/pkg/log"
+	"github.com/govice/golinksd/pkg/scheduler"
 	"github.com/rs/xid"
 )
 

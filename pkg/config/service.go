@@ -10,7 +10,7 @@ import (
 	"path/filepath"
 
 	"github.com/gin-gonic/gin"
-	"github.com/govice/golinks-daemon/pkg/log"
+	"github.com/govice/golinksd/pkg/log"
 	"github.com/manifoldco/promptui"
 	"github.com/spf13/viper"
 )

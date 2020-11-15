@@ -8,8 +8,8 @@ import (
 	"net/http"
 	"strconv"
 
-	"github.com/govice/golinks-daemon/pkg/log"
 	"github.com/govice/golinks/block"
+	"github.com/govice/golinksd/pkg/log"
 	"github.com/spf13/viper"
 )
 
