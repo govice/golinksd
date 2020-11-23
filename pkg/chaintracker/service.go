@@ -173,7 +173,8 @@ func (ct *Service) localChainFileLength() (int, error) {
 		if strings.HasPrefix(file.Name(), strconv.Itoa(index)) {
 			length++
 		} else {
-			log.Errln("file name", file.Name(), "does not match expected prefix", strconv.Itoa(index))
+			log.Errln("file name", file.Name(), "does not have expected prefix", strconv.Itoa(index))
+			return -1, ErrChainDesync
 		}
 	}
 
@@ -197,21 +198,18 @@ func (ct *Service) getSyncInfo() (*SyncInfo, error) {
 	}
 
 	localHead, err := ct.LocalHead()
-	if err != nil {
-		log.Errln("failed to get local head")
-		return nil, err
-	}
+	if !errors.Is(err, ErrMissingLocalHead) {
+		// enforce the daemon population by a single remote chain
+		remoteLocalHead, err := ct.servicer.GolinksService().GetBlock(localHead.Index)
+		if err != nil {
+			log.Errln("failed to get local head from remote")
+			return nil, err
+		}
 
-	// enforce the daemon population by a single remote chain
-	remoteLocalHead, err := ct.servicer.GolinksService().GetBlock(localHead.Index)
-	if err != nil {
-		log.Errln("failed to get local head from remote")
-		return nil, err
-	}
-
-	if !block.Equal(localHead, remoteLocalHead) {
-		log.Errln(ErrChainDesync)
-		return nil, err
+		if !block.Equal(localHead, remoteLocalHead) || (localLength > remoteLength) {
+			log.Errln(ErrChainDesync)
+			return nil, ErrChainDesync
+		}
 	}
 
 	syncInfo := &SyncInfo{
@@ -240,12 +238,18 @@ func (ct *Service) requestBlockRange(startIndex, endIndex int) ([]*block.Block, 
 	return blocks, nil
 }
 
+var ErrMissingLocalHead = errors.New("chaintracker: missing local head")
+
 func (ct *Service) LocalHead() (*block.Block, error) {
 
 	files, err := ct.readChainDir()
 	if err != nil {
 		log.Errln("failed to read chain directory")
 		return nil, err
+	}
+
+	if files == nil {
+		return nil, ErrMissingLocalHead
 	}
 
 	fileAbs := filepath.Join(ct.chainDir(), files[len(files)-1].Name())
@@ -269,9 +273,17 @@ func (ct *Service) readChainDir() ([]os.FileInfo, error) {
 		return nil, err
 	}
 
-	sort.Sort(NumericalFileInfos(files))
+	var filesOut []os.FileInfo
+	// omit any OS generated hidden files/folders
+	for _, fi := range files {
+		if strings.HasSuffix(fi.Name(), ".json") {
+			filesOut = append(filesOut, fi)
+		}
+	}
 
-	return files, nil
+	sort.Sort(NumericalFileInfos(filesOut))
+
+	return filesOut, nil
 }
 
 type SyncInfo struct {
