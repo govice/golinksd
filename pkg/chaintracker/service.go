@@ -3,8 +3,10 @@ package chaintracker
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"io/ioutil"
 	"os"
+	"path"
 	"path/filepath"
 	"sort"
 	"strconv"
@@ -83,7 +85,17 @@ func (ct *Service) chainDir() string {
 
 func (ct *Service) checkAndSync() error {
 	syncInfo, err := ct.getSyncInfo()
-	if err != nil {
+	if errors.Is(err, ErrChainDesync) {
+		if err := ct.clearLocalChain(); err != nil {
+			log.Errln("failed to clear local chain", err)
+			return err
+		}
+		syncInfo, err = ct.getSyncInfo()
+		if err != nil {
+			log.Errln("failed to get sync info:", err)
+			return err
+		}
+	} else if err != nil {
 		log.Errln("failed to get sync info:", err)
 		return err
 	}
@@ -93,6 +105,23 @@ func (ct *Service) checkAndSync() error {
 		if err := ct.synchronize(syncInfo); err != nil {
 			log.Errln("failed to synchronize chain", err)
 			return err
+		}
+	}
+
+	return nil
+}
+
+func (ct *Service) clearLocalChain() error {
+	fis, err := ioutil.ReadDir(ct.chainDir())
+	if err != nil {
+		return err
+	}
+
+	for _, f := range fis {
+		fn := path.Join(ct.chainDir(), f.Name())
+		if err := os.RemoveAll(fn); err != nil {
+			log.Errln("failed to remove file:", fn)
+			return nil
 		}
 	}
 
@@ -151,6 +180,9 @@ func (ct *Service) localChainFileLength() (int, error) {
 	return length, nil
 }
 
+// ErrChainDesync indicates the local chain head is out of sync with a remote block of the same index.
+var ErrChainDesync = errors.New("chaintracker: desync in local chain with remote")
+
 func (ct *Service) getSyncInfo() (*SyncInfo, error) {
 	remoteLength, err := ct.servicer.GolinksService().GetLength()
 	if err != nil {
@@ -161,6 +193,24 @@ func (ct *Service) getSyncInfo() (*SyncInfo, error) {
 	localLength, err := ct.localChainFileLength()
 	if err != nil {
 		log.Errln("failed to get local chain length")
+		return nil, err
+	}
+
+	localHead, err := ct.LocalHead()
+	if err != nil {
+		log.Errln("failed to get local head")
+		return nil, err
+	}
+
+	// enforce the daemon population by a single remote chain
+	remoteLocalHead, err := ct.servicer.GolinksService().GetBlock(localHead.Index)
+	if err != nil {
+		log.Errln("failed to get local head from remote")
+		return nil, err
+	}
+
+	if !block.Equal(localHead, remoteLocalHead) {
+		log.Errln(ErrChainDesync)
 		return nil, err
 	}
 
