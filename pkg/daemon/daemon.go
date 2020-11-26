@@ -2,6 +2,7 @@ package daemon
 
 import (
 	"context"
+	"path/filepath"
 	"sync"
 
 	"github.com/govice/golinksd/internal/webserver"
@@ -158,7 +159,8 @@ func (d *Daemon) initializeServices() error {
 	}
 	d.authenticationService = as
 
-	ws, err := worker.New(d)
+	workerConfigPath := filepath.Join(d.ConfigService().HomeDir(), "workers.json")
+	ws, err := worker.New(d, &WorkerConfigManager{Path: workerConfigPath})
 	if err != nil {
 		log.Errln("failed to initialize worker service")
 		return err
@@ -188,20 +190,6 @@ func (d *Daemon) initializeBackgroundTasks() error {
 		return err
 	}
 	d.webserver = webserver
-
-	workerService, err := worker.New(d)
-	if err != nil {
-		log.Errln("failed to initialize worker")
-		return err
-	}
-	d.workerService = workerService
-
-	ct, err := chaintracker.New(d)
-	if err != nil {
-		log.Errln("failed to initialize chain tracker")
-		return err
-	}
-	d.chainTrackerService = ct
 
 	return nil
 }
