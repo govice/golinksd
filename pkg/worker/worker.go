@@ -31,10 +31,6 @@ type Worker struct {
 	servicer         Servicer
 }
 
-// type Scheduler interface {
-// 	Schedule(id string, task func() error) error
-// }
-
 var ErrBadRootPath = errors.New("bad root_path")
 
 func (w *Worker) Execute(ctx context.Context) error {

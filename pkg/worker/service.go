@@ -2,11 +2,7 @@ package worker
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
-	"io/ioutil"
-	"os"
-	"path/filepath"
 	"sync"
 
 	"github.com/govice/golinksd/pkg/chaintracker"
@@ -25,6 +21,7 @@ type Service struct {
 	mu           *sync.Mutex
 	scheduler    *scheduler.Scheduler
 	servicer     Servicer
+	crw          ConfigReaderWriter
 }
 
 type ConfigServicer interface {
@@ -50,7 +47,7 @@ type Servicer interface {
 	WorkerServicer
 }
 
-func New(servicer Servicer) (*Service, error) {
+func New(servicer Servicer, crw ConfigReaderWriter) (*Service, error) {
 	s, err := scheduler.New(viper.GetInt("concurrent_task_limit"))
 	if err != nil {
 		return nil, err
@@ -59,6 +56,7 @@ func New(servicer Servicer) (*Service, error) {
 		mu:        &sync.Mutex{},
 		scheduler: s,
 		servicer:  servicer,
+		crw:       crw,
 	}
 
 	workerConfig, err := m.loadWorkerConfig()
@@ -74,21 +72,8 @@ func (w *Service) loadWorkerConfig() (*Config, error) {
 	w.mu.Lock()
 	defer w.mu.Unlock()
 	log.Logln("loading worker config...")
-	workerConfigPath := filepath.Join(w.servicer.ConfigService().HomeDir(), "workers.json")
-
-	_, err := os.Stat(workerConfigPath)
-	if os.IsNotExist(err) {
-		log.Logln("no worker configuration defined, initializing with empty config")
-		return &Config{}, nil
-	}
-
-	configBytes, err := ioutil.ReadFile(workerConfigPath)
+	workerConfig, err := w.crw.ReadConfig()
 	if err != nil {
-		return nil, err
-	}
-
-	workerConfig := &Config{}
-	if err := json.Unmarshal(configBytes, workerConfig); err != nil {
 		return nil, err
 	}
 
@@ -108,13 +93,7 @@ func (w *Service) loadWorkerConfig() (*Config, error) {
 
 func (w *Service) saveWorkerConfig() error {
 	log.Logln("saving worker config...")
-	workerConfigPath := filepath.Join(w.servicer.ConfigService().HomeDir(), "workers.json")
-	configBytes, err := json.MarshalIndent(w.WorkerConfig, "", "  ")
-	if err != nil {
-		return err
-	}
-
-	return ioutil.WriteFile(workerConfigPath, configBytes, 0666)
+	return w.crw.WriteConfig(w.WorkerConfig)
 }
 
 func (w *Service) Execute(ctx context.Context) error {
