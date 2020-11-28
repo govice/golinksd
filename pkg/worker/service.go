@@ -3,6 +3,7 @@ package worker
 import (
 	"context"
 	"errors"
+	"runtime"
 	"sync"
 
 	"github.com/govice/golinksd/pkg/chaintracker"
@@ -46,11 +47,9 @@ type Servicer interface {
 	WorkerServicer
 }
 
-// DefaultSchedulerSize specifies the default scheduler size used on initialization
-const DefaultSchedulerSize int = 5
-
 func NewDefault(servicer Servicer, crw ConfigReaderWriter) (*Service, error) {
-	return newHelper(servicer, crw, DefaultSchedulerSize)
+	ss := int(runtime.NumCPU()/4) + 1
+	return newHelper(servicer, crw, ss)
 }
 
 func New(servicer Servicer, crw ConfigReaderWriter, schedulerSize int) (*Service, error) {
@@ -58,6 +57,11 @@ func New(servicer Servicer, crw ConfigReaderWriter, schedulerSize int) (*Service
 }
 
 func newHelper(servicer Servicer, crw ConfigReaderWriter, schedulerSize int) (*Service, error) {
+	if schedulerSize <= 1 {
+		log.Warnln("worker service scheduler set to sequential execution")
+		schedulerSize = 1
+	}
+
 	s, err := scheduler.New(schedulerSize)
 	if err != nil {
 		return nil, err

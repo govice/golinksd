@@ -253,5 +253,4 @@ func TestScheduleWork(t *testing.T) {
 	if i != 1 {
 		t.Error("deadline exceeded. expected scheduled work execution")
 	}
-
 }
