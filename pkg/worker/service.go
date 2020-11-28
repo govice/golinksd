@@ -3,6 +3,7 @@ package worker
 import (
 	"context"
 	"errors"
+	"runtime"
 	"sync"
 
 	"github.com/govice/golinksd/pkg/chaintracker"
@@ -10,7 +11,6 @@ import (
 	"github.com/govice/golinksd/pkg/golinks"
 	"github.com/govice/golinksd/pkg/log"
 	"github.com/govice/golinksd/pkg/scheduler"
-	"github.com/spf13/viper"
 	"golang.org/x/sync/errgroup"
 )
 
@@ -47,8 +47,22 @@ type Servicer interface {
 	WorkerServicer
 }
 
-func New(servicer Servicer, crw ConfigReaderWriter) (*Service, error) {
-	s, err := scheduler.New(viper.GetInt("concurrent_task_limit"))
+func NewDefault(servicer Servicer, crw ConfigReaderWriter) (*Service, error) {
+	ss := int(runtime.NumCPU()/4) + 1
+	return newHelper(servicer, crw, ss)
+}
+
+func New(servicer Servicer, crw ConfigReaderWriter, schedulerSize int) (*Service, error) {
+	return newHelper(servicer, crw, schedulerSize)
+}
+
+func newHelper(servicer Servicer, crw ConfigReaderWriter, schedulerSize int) (*Service, error) {
+	if schedulerSize <= 1 {
+		log.Warnln("worker service scheduler set to sequential execution")
+		schedulerSize = 1
+	}
+
+	s, err := scheduler.New(schedulerSize)
 	if err != nil {
 		return nil, err
 	}
