@@ -1,6 +1,7 @@
 package worker
 
 import (
+	"errors"
 	"testing"
 
 	"github.com/govice/golinksd/pkg/chaintracker"
@@ -166,5 +167,41 @@ func TestRemoveWorker(t *testing.T) {
 
 	if cm.ConfigWrites != 1 {
 		t.Error("expected 1 config write on worker remove. got", cm.ConfigWrites)
+	}
+}
+
+func TestGetWorkerByIndex(t *testing.T) {
+	ts := &testServicer{}
+	initial := &Config{
+		Workers: []*Worker{
+			{
+				RootPath:         "/tmp/root",
+				GenerationPeriod: 100,
+				IgnorePaths:      []string{"/tmp/ignore"},
+			},
+		}}
+	cm := newTestConfigManager(initial)
+	service, err := New(ts, cm)
+	if err != nil {
+		t.Error("failed to instantiate new service", err)
+	}
+
+	if len(cm.Config.Workers) != 1 {
+		t.Error("expected 1 worker. got", cm.Config.Workers)
+	}
+
+	_, err = service.GetWorkerByIndex(0)
+	if err != nil {
+		t.Error(err)
+	}
+
+	_, err = service.GetWorkerByIndex(1)
+	if err == nil || !errors.Is(err, ErrWorkerIndexOutOfBonds) {
+		t.Error("expected error", ErrWorkerIndexOutOfBonds)
+	}
+
+	_, err = service.GetWorkerByIndex(-1)
+	if err == nil || !errors.Is(err, ErrWorkerIndexOutOfBonds) {
+		t.Error("expected error", ErrWorkerIndexOutOfBonds)
 	}
 }
