@@ -160,7 +160,7 @@ func (d *Daemon) initializeServices() error {
 	d.authenticationService = as
 
 	workerConfigPath := filepath.Join(d.ConfigService().HomeDir(), "workers.json")
-	ws, err := worker.New(d, &WorkerConfigManager{Path: workerConfigPath})
+	ws, err := worker.New(d, &WorkerConfigManager{Path: workerConfigPath}, viper.GetInt("concurrent_task_limit"))
 	if err != nil {
 		log.Errln("failed to initialize worker service")
 		return err

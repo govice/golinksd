@@ -10,7 +10,6 @@ import (
 	"github.com/govice/golinksd/pkg/golinks"
 	"github.com/govice/golinksd/pkg/log"
 	"github.com/govice/golinksd/pkg/scheduler"
-	"github.com/spf13/viper"
 	"golang.org/x/sync/errgroup"
 )
 
@@ -47,8 +46,19 @@ type Servicer interface {
 	WorkerServicer
 }
 
-func New(servicer Servicer, crw ConfigReaderWriter) (*Service, error) {
-	s, err := scheduler.New(viper.GetInt("concurrent_task_limit"))
+// DefaultSchedulerSize specifies the default scheduler size used on initialization
+const DefaultSchedulerSize int = 5
+
+func NewDefault(servicer Servicer, crw ConfigReaderWriter) (*Service, error) {
+	return newHelper(servicer, crw, DefaultSchedulerSize)
+}
+
+func New(servicer Servicer, crw ConfigReaderWriter, schedulerSize int) (*Service, error) {
+	return newHelper(servicer, crw, schedulerSize)
+}
+
+func newHelper(servicer Servicer, crw ConfigReaderWriter, schedulerSize int) (*Service, error) {
+	s, err := scheduler.New(schedulerSize)
 	if err != nil {
 		return nil, err
 	}

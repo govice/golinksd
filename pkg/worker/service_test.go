@@ -1,8 +1,10 @@
 package worker
 
 import (
+	"context"
 	"errors"
 	"testing"
+	"time"
 
 	"github.com/govice/golinksd/pkg/chaintracker"
 	"github.com/govice/golinksd/pkg/config"
@@ -60,7 +62,7 @@ func TestNew(t *testing.T) {
 				IgnorePaths:      []string{"/tmp/ignore"},
 			},
 		}})
-	service, err := New(ts, cm)
+	service, err := NewDefault(ts, cm)
 	if err != nil {
 		t.Error("failed to instantiate new service", err)
 	}
@@ -104,7 +106,7 @@ func TestAddWorker(t *testing.T) {
 			},
 		}}
 	cm := newTestConfigManager(initial)
-	service, err := New(ts, cm)
+	service, err := NewDefault(ts, cm)
 	if err != nil {
 		t.Error("failed to instantiate new service", err)
 	}
@@ -146,7 +148,7 @@ func TestRemoveWorker(t *testing.T) {
 			},
 		}}
 	cm := newTestConfigManager(initial)
-	service, err := New(ts, cm)
+	service, err := NewDefault(ts, cm)
 	if err != nil {
 		t.Error("failed to instantiate new service", err)
 	}
@@ -181,7 +183,7 @@ func TestGetWorkerByIndex(t *testing.T) {
 			},
 		}}
 	cm := newTestConfigManager(initial)
-	service, err := New(ts, cm)
+	service, err := NewDefault(ts, cm)
 	if err != nil {
 		t.Error("failed to instantiate new service", err)
 	}
@@ -204,4 +206,52 @@ func TestGetWorkerByIndex(t *testing.T) {
 	if err == nil || !errors.Is(err, ErrWorkerIndexOutOfBonds) {
 		t.Error("expected error", ErrWorkerIndexOutOfBonds)
 	}
+}
+
+func TestScheduleWork(t *testing.T) {
+	ts := &testServicer{}
+	initial := &Config{
+		Workers: []*Worker{
+			{
+				RootPath:         "/tmp/root",
+				GenerationPeriod: 100,
+				IgnorePaths:      []string{"/tmp/ignore"},
+			},
+		}}
+	cm := newTestConfigManager(initial)
+	service, err := New(ts, cm, 1)
+	if err != nil {
+		t.Error("failed to instantiate new service", err)
+	}
+
+	if len(cm.Config.Workers) != 1 {
+		t.Error("expected 1 worker. got", cm.Config.Workers)
+	}
+
+	var i int
+
+	service.ScheduleWork("1234", func() error {
+		i++
+		return nil
+	})
+
+	if i != 0 {
+		t.Error("work executed with no running worker")
+	}
+
+	primary, cancelFunc := context.WithDeadline(context.Background(), time.Now().Add(time.Duration(5)*time.Second))
+
+	// this execution occurs as part of Execute
+	go service.scheduler.Run(primary)
+
+	service.ScheduleWork("5555", func() error {
+		cancelFunc()
+		return nil
+	})
+
+	<-primary.Done()
+	if i != 1 {
+		t.Error("deadline exceeded. expected scheduled work execution")
+	}
+
 }
