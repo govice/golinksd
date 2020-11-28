@@ -4,10 +4,8 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"io"
 	glog "log"
 	"os"
-	"path/filepath"
 	"sync"
 	"time"
 
@@ -141,25 +139,27 @@ func (w *Worker) logln(v ...interface{}) {
 
 func NewWorker(servicer Servicer, rootPath string, generationPeriod int, ignorePaths []string) (*Worker, error) {
 	workerID := xid.NewWithTime(time.Now()).String()
-	workerLogsDir := filepath.Join(servicer.ConfigService().HomeDir(), "logs")
-	os.Mkdir(workerLogsDir, os.ModePerm)
-	logFilePath := filepath.Join(workerLogsDir, workerID+".log")
-	f, err := os.OpenFile(logFilePath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
-	if err != nil {
-		return nil, err
-	}
+	//TODO cleanup worker logging interface
+	// workerLogsDir := filepath.Join(servicer.ConfigService().HomeDir(), "logs")
+	// os.Mkdir(workerLogsDir, os.ModePerm)
+	// logFilePath := filepath.Join(workerLogsDir, workerID+".log")
+	// f, err := os.OpenFile(logFilePath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+	// if err != nil {
+	// 	return nil, err
+	// }
 
 	worker := &Worker{
 		RootPath:         rootPath,
 		GenerationPeriod: generationPeriod,
-		logger:           glog.New(io.MultiWriter(f, os.Stderr), workerID+" ", glog.Ltime),
-		id:               workerID,
-		IgnorePaths:      ignorePaths,
-		servicer:         servicer,
+		// logger:           glog.New(io.MultiWriter(f, os.Stderr), workerID+" ", glog.Ltime),
+		logger:      glog.New(os.Stderr, workerID+" ", glog.Ltime),
+		id:          workerID,
+		IgnorePaths: ignorePaths,
+		servicer:    servicer,
 	}
 
 	worker.AddCancelFunc(func() {
-		f.Close()
+		// f.Close()
 	})
 
 	return worker, nil
