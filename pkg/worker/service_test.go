@@ -133,3 +133,38 @@ func TestAddWorker(t *testing.T) {
 		t.Error("expected 1 config read on New. got", cm.ConfigReads)
 	}
 }
+
+func TestRemoveWorker(t *testing.T) {
+	ts := &testServicer{}
+	initial := &Config{
+		Workers: []*Worker{
+			{
+				RootPath:         "/tmp/root",
+				GenerationPeriod: 100,
+				IgnorePaths:      []string{"/tmp/ignore"},
+			},
+		}}
+	cm := newTestConfigManager(initial)
+	service, err := New(ts, cm)
+	if err != nil {
+		t.Error("failed to instantiate new service", err)
+	}
+
+	if len(cm.Config.Workers) != 1 {
+		t.Error("expected 1 worker. got", cm.Config.Workers)
+	}
+
+	service.removeWorker(0)
+
+	if len(cm.Config.Workers) != 0 {
+		t.Error("expected empty workers. got", len(cm.Config.Workers))
+	}
+
+	if cm.ConfigReads != 1 {
+		t.Error("expected 1 config read on New. got", cm.ConfigReads)
+	}
+
+	if cm.ConfigWrites != 1 {
+		t.Error("expected 1 config write on worker remove. got", cm.ConfigWrites)
+	}
+}
