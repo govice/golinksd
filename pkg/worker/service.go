@@ -3,6 +3,9 @@ package worker
 import (
 	"context"
 	"errors"
+	"io"
+	"os"
+	"path/filepath"
 	"runtime"
 	"sync"
 
@@ -15,13 +18,14 @@ import (
 )
 
 type Service struct {
-	errorGroup   errgroup.Group
-	WorkerConfig *Config
-	ctx          context.Context
-	mu           *sync.Mutex
-	scheduler    *scheduler.Scheduler
-	servicer     Servicer
-	crw          ConfigReaderWriter
+	errorGroup        errgroup.Group
+	WorkerConfig      *Config
+	ctx               context.Context
+	mu                *sync.Mutex
+	scheduler         *scheduler.Scheduler
+	servicer          Servicer
+	crw               ConfigReaderWriter
+	LogWriterProducer func(id string) io.Writer
 }
 
 type ConfigServicer interface {
@@ -49,14 +53,18 @@ type Servicer interface {
 
 func NewDefault(servicer Servicer, crw ConfigReaderWriter) (*Service, error) {
 	ss := int(runtime.NumCPU()/4) + 1
-	return newHelper(servicer, crw, ss)
+	return newHelper(servicer, crw, ss, func(id string) io.Writer {
+		return NewDefaultLogger(id, servicer.ConfigService().HomeDir())
+	})
 }
 
-func New(servicer Servicer, crw ConfigReaderWriter, schedulerSize int) (*Service, error) {
-	return newHelper(servicer, crw, schedulerSize)
+func New(servicer Servicer, crw ConfigReaderWriter, schedulerSize int, logWriterProducer func(id string) io.Writer) (*Service, error) {
+	return newHelper(servicer, crw, schedulerSize, logWriterProducer)
 }
 
-func newHelper(servicer Servicer, crw ConfigReaderWriter, schedulerSize int) (*Service, error) {
+func newHelper(servicer Servicer, crw ConfigReaderWriter, schedulerSize int, logWriterProducer func(id string) io.Writer) (*Service, error) {
+	workerLogsDir := filepath.Join(servicer.ConfigService().HomeDir(), "logs")
+	os.Mkdir(workerLogsDir, os.ModePerm)
 	if schedulerSize <= 1 {
 		log.Warnln("worker service scheduler set to sequential execution")
 		schedulerSize = 1
@@ -67,10 +75,11 @@ func newHelper(servicer Servicer, crw ConfigReaderWriter, schedulerSize int) (*S
 		return nil, err
 	}
 	m := &Service{
-		mu:        &sync.Mutex{},
-		scheduler: s,
-		servicer:  servicer,
-		crw:       crw,
+		mu:                &sync.Mutex{},
+		scheduler:         s,
+		servicer:          servicer,
+		crw:               crw,
+		LogWriterProducer: logWriterProducer,
 	}
 
 	workerConfig, err := m.loadWorkerConfig()
@@ -94,7 +103,13 @@ func (w *Service) loadWorkerConfig() (*Config, error) {
 	// reinitialize with initialized worker
 	configOut := &Config{}
 	for _, worker := range workerConfig.Workers {
-		w, err := NewWorker(w.servicer, worker.RootPath, worker.GenerationPeriod, worker.IgnorePaths)
+		config := &NewWorkerConfig{
+			RootPath:         worker.RootPath,
+			GenerationPeriod: worker.GenerationPeriod,
+			IgnorePaths:      worker.IgnorePaths,
+			WorkerID:         worker.id,
+		}
+		w, err := NewWorker(w.servicer, config, w.LogWriterProducer)
 		if err != nil {
 			log.Errln("failed to create new worker", err)
 			return nil, err
@@ -173,11 +188,11 @@ func (w *Service) getWorker(index int) *Worker {
 	return w.WorkerConfig.Workers[index]
 }
 
-func (w *Service) addWorker(rootPath string, generationPeriod int, ignorePaths []string) (*Worker, error) {
+func (w *Service) addWorker(config *NewWorkerConfig) (*Worker, error) {
 	w.mu.Lock()
 	defer w.mu.Unlock()
 
-	worker, err := NewWorker(w.servicer, rootPath, generationPeriod, ignorePaths)
+	worker, err := NewWorker(w.servicer, config, w.LogWriterProducer)
 	if err != nil {
 		return nil, err
 	}
@@ -217,8 +232,8 @@ func (w *Service) DeleteWorkerByIndex(index int) error {
 	return w.removeWorker(index)
 }
 
-func (w *Service) AddWorker(rootPath string, generationPeriod int, ignorePaths []string) error {
-	if _, err := w.addWorker(rootPath, generationPeriod, ignorePaths); err != nil {
+func (w *Service) AddWorker(config *NewWorkerConfig) error {
+	if _, err := w.addWorker(config); err != nil {
 		return err
 	}
 	return w.startNewWorkers()

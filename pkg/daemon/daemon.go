@@ -2,6 +2,7 @@ package daemon
 
 import (
 	"context"
+	"io"
 	"path/filepath"
 	"sync"
 
@@ -160,7 +161,9 @@ func (d *Daemon) initializeServices() error {
 	d.authenticationService = as
 
 	workerConfigPath := filepath.Join(d.ConfigService().HomeDir(), "workers.json")
-	ws, err := worker.New(d, &WorkerConfigManager{Path: workerConfigPath}, viper.GetInt("concurrent_task_limit"))
+	ws, err := worker.New(d, &WorkerConfigManager{Path: workerConfigPath}, viper.GetInt("concurrent_task_limit"), func(id string) io.Writer {
+		return worker.NewDefaultLogger(id, filepath.Join(d.ConfigService().HomeDir(), "logs"))
+	})
 	if err != nil {
 		log.Errln("failed to initialize worker service")
 		return err
