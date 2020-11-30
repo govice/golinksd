@@ -4,8 +4,10 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"io"
 	glog "log"
 	"os"
+	"path/filepath"
 	"sync"
 	"time"
 
@@ -18,7 +20,6 @@ import (
 )
 
 type Worker struct {
-	// workerService    *Service
 	cancelFunc       context.CancelFunc
 	RootPath         string   `json:"root_path"`
 	GenerationPeriod int      `json:"generation_period"`
@@ -27,6 +28,40 @@ type Worker struct {
 	id               string
 	logger           *glog.Logger
 	servicer         Servicer
+}
+
+type NewWorkerConfig struct {
+	RootPath         string
+	GenerationPeriod int
+	IgnorePaths      []string
+	WorkerID         string
+}
+
+// DefaultLogger satisfies io.WriteCloser interface to supply io.Multiwriter with a
+// closer func for cleanup.
+type DefaultLogger struct {
+	logDirPath string
+	id         string
+}
+
+func NewDefaultLogger(id, logDir string) *DefaultLogger {
+	return &DefaultLogger{
+		logDirPath: logDir,
+		id:         id,
+	}
+}
+
+func (wlm *DefaultLogger) Write(p []byte) (n int, err error) {
+	logFilePath := filepath.Join(wlm.logDirPath, wlm.id+".log")
+	f, err := os.OpenFile(logFilePath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+	if err != nil {
+		return -1, err
+	}
+
+	//TODO do we worry about the OS file descriptor limit? io.WriteCloser?
+	// wrap io.Writer to use type referenced file, implement io.Closer to close file
+	defer f.Close()
+	return f.Write(p)
 }
 
 var ErrBadRootPath = errors.New("bad root_path")
@@ -137,30 +172,20 @@ func (w *Worker) logln(v ...interface{}) {
 	w.logger.Println(v...)
 }
 
-func NewWorker(servicer Servicer, rootPath string, generationPeriod int, ignorePaths []string) (*Worker, error) {
-	workerID := xid.NewWithTime(time.Now()).String()
-	//TODO cleanup worker logging interface
-	// workerLogsDir := filepath.Join(servicer.ConfigService().HomeDir(), "logs")
-	// os.Mkdir(workerLogsDir, os.ModePerm)
-	// logFilePath := filepath.Join(workerLogsDir, workerID+".log")
-	// f, err := os.OpenFile(logFilePath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
-	// if err != nil {
-	// 	return nil, err
-	// }
-
-	worker := &Worker{
-		RootPath:         rootPath,
-		GenerationPeriod: generationPeriod,
-		// logger:           glog.New(io.MultiWriter(f, os.Stderr), workerID+" ", glog.Ltime),
-		logger:      glog.New(os.Stderr, workerID+" ", glog.Ltime),
-		id:          workerID,
-		IgnorePaths: ignorePaths,
-		servicer:    servicer,
+func NewWorker(servicer Servicer, config *NewWorkerConfig, logWriterProucer func(id string) io.Writer) (*Worker, error) {
+	if config.WorkerID == "" {
+		config.WorkerID = xid.NewWithTime(time.Now()).String()
 	}
-
-	worker.AddCancelFunc(func() {
-		// f.Close()
-	})
+	logWriter := logWriterProucer(config.WorkerID)
+	worker := &Worker{
+		cancelFunc:       func() {},
+		RootPath:         config.RootPath,
+		GenerationPeriod: config.GenerationPeriod,
+		logger:           glog.New(io.MultiWriter(logWriter, os.Stderr), config.WorkerID+" ", glog.Ltime),
+		id:               config.WorkerID,
+		IgnorePaths:      config.IgnorePaths,
+		servicer:         servicer,
+	}
 
 	return worker, nil
 }

@@ -6,6 +6,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/govice/golinksd/pkg/log"
+	"github.com/govice/golinksd/pkg/worker"
 )
 
 func (w *Webserver) registerConsoleHandlers() error {
@@ -175,7 +176,10 @@ func (w *Webserver) registerConsoleHandlers() error {
 		}
 
 		//TODO IGNORE PATHS
-		if err := w.servicer.WorkerService().AddWorker(rootPath, generationPeriod, nil); err != nil {
+		if err := w.servicer.WorkerService().AddWorker(&worker.NewWorkerConfig{
+			RootPath:         rootPath,
+			GenerationPeriod: generationPeriod,
+		}); err != nil {
 			c.AbortWithError(http.StatusInternalServerError, err)
 			return
 		}

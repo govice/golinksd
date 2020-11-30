@@ -3,6 +3,7 @@ package worker
 import (
 	"context"
 	"errors"
+	"io"
 	"testing"
 	"time"
 
@@ -50,6 +51,12 @@ func (rw *testConfigManager) WriteConfig(cfg *Config) error {
 	rw.ConfigWrites++
 	rw.Config = cfg
 	return nil
+}
+
+type TestLogger struct{}
+
+func (tl *TestLogger) Write(p []byte) (int, error) {
+	return 0, nil
 }
 
 func TestNew(t *testing.T) {
@@ -111,7 +118,11 @@ func TestAddWorker(t *testing.T) {
 		t.Error("failed to instantiate new service", err)
 	}
 
-	worker, err := service.addWorker("/tmp/root2", 100, []string{"/tmp/ingnore2"})
+	worker, err := service.addWorker(&NewWorkerConfig{
+		RootPath:         "/tmp/root2",
+		GenerationPeriod: 100,
+		IgnorePaths:      []string{"/tmp/ingnore2"},
+	})
 	if err != nil {
 		t.Error("expected successful worker add.", err)
 	}
@@ -219,7 +230,9 @@ func TestScheduleWork(t *testing.T) {
 			},
 		}}
 	cm := newTestConfigManager(initial)
-	service, err := New(ts, cm, 1)
+	service, err := New(ts, cm, 1, func(id string) io.Writer {
+		return &TestLogger{}
+	})
 	if err != nil {
 		t.Error("failed to instantiate new service", err)
 	}
